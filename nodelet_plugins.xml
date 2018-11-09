@@ -1,0 +1,6 @@
+<library path="lib/libpath_publisher_nodelet">
+<class name="path_publisher_ros_tool/PathPublisherNodelet"
+       type="path_publisher_ros_tool::PathPublisherNodelet" base_class_type="nodelet::Nodelet">
+  <description></description>
+</class>
+</library>
