@@ -11,3 +11,13 @@
 # boolean: true
 # vector: [1.0, 2.0, 3.4]
 # map: {"a": "b", "c": "d"}
+
+path_to_map:
+map_name:
+mode: train
+frame_id_map: map
+frame_id_vehicle: vehicle_front_axle
+center_x: 0.0
+center_y: 0.0
+radius_noise: 0.2
+rotation_noise: 10

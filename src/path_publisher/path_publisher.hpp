@@ -6,6 +6,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <nav_msgs/Path.h>
 #include <Eigen/Eigen>
+#include <Eigen/Dense>
 #include "road_map/RoadMap.hpp"
 
 #include "path_publisher_ros_tool/PathPublisherInterface.h"
@@ -24,6 +25,7 @@ public:
 private:
     void callbackTimer(const ros::TimerEvent&);
     void reconfigureRequest(const Interface::Config&, uint32_t);
+    void samplePath();
 
     Interface interface_;
     dynamic_reconfigure::Server<Interface::Config> reconfigureServer_;
@@ -34,6 +36,8 @@ private:
     ros::Timer timer_;
 
     nav_msgs::Path::Ptr path_{new nav_msgs::Path};
+    std::vector<std::vector<Eigen::Vector3d>> samplePath_{5};
     RoadMap map_{0., 0.};
+    Eigen::Vector3d center_;
 };
 } // namespace path_publisher_ros_tool
