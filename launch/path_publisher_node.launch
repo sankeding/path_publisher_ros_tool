@@ -4,6 +4,7 @@
 
   <node pkg="path_publisher_ros_tool" type="path_publisher" name="path_publisher" output="screen">
     <rosparam command="load" file="$(arg config)"/>
+    <param name="path_to_map" value="$(find path_generator_ros_tool)/res/" />
   </node>
 
 </launch>

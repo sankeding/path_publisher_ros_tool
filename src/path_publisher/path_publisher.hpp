@@ -8,6 +8,7 @@
 #include <Eigen/Eigen>
 #include <Eigen/Dense>
 #include "road_map/RoadMap.hpp"
+#include <random>
 
 #include "path_publisher_ros_tool/PathPublisherInterface.h"
 
@@ -39,5 +40,6 @@ private:
     std::vector<std::vector<Eigen::Vector3d>> samplePath_{5};
     RoadMap map_{0., 0.};
     Eigen::Vector3d center_;
+
 };
 } // namespace path_publisher_ros_tool
