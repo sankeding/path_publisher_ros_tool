@@ -44,12 +44,13 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 //  load path from .osm file
 		map_.loadFromFile(interface_.path_to_map + interface_.map_name);
 		double x, y;
-		for (int i = 0; i > (int)map_.trajectories.at(1).size(); i++){
+		for (int i = 0; i < (int)map_.trajectories.at(1).size(); i++){
 			map_.getVertexMeters(1, i, x, y);
 			pose_ros.pose.position.x = x;
 			pose_ros.pose.position.y = y;
 			path_->poses.emplace_back(pose_ros);
 		}
+		ROS_DEBUG_STREAM("load road finished.");
     }
 
     timer_ = nhPrivate.createTimer(ros::Rate(interface_.timer_rate), &PathPublisher::callbackTimer, this);
@@ -98,6 +99,7 @@ void PathPublisher::samplePath(){
 void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	path_->header.stamp = timer_event.current_expected;
 	if (interface_.mode == "test"){
+//		ROS_DEBUG_STREAM("there are " << path_->poses.size() << "points.");
 		interface_.path_publisher.publish(path_);
 	}else if (interface_.mode == "train"){
 		samplePath();

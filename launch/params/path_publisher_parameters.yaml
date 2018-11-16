@@ -12,8 +12,8 @@
 # vector: [1.0, 2.0, 3.4]
 # map: {"a": "b", "c": "d"}
 
-#map_name:
-mode: train
+map_name: fitted_road_map.osm
+mode: test
 frame_id_map: world
 frame_id_vehicle: vehicle_front_axle
 center_x: 3.0
