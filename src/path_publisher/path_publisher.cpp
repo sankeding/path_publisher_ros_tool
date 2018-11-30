@@ -51,25 +51,27 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 			path_vector_.emplace_back(Eigen::Vector2d(x, y));
 			path_->poses.emplace_back(pose_ros);
 		}
-		ROS_DEBUG_STREAM("load road finished.");
+		ROS_DEBUG_STREAM("load road finished." << std::endl <<
+				"the whole path length: " << path_->poses.size());
 
 //		set prev_pos_index mark
 		//    initial vehicle pose
 		Eigen::Affine3d vehicle_pose;
-		try {
-			const geometry_msgs::TransformStamped tf_ros =
-				tfBuffer_.lookupTransform(interface_.frame_id_map, interface_.frame_id_vehicle, ros::Time(0));
-			vehicle_pose = tf2::transformToEigen(tf_ros);
-		} catch (const tf2::TransformException& e){
-			ROS_WARN_STREAM(e.what());
-			return;
+		while(1){
+			try {
+				const geometry_msgs::TransformStamped tf_ros =
+					tfBuffer_.lookupTransform(interface_.frame_id_map, interface_.frame_id_vehicle, ros::Time(0));
+				vehicle_pose = tf2::transformToEigen(tf_ros);
+				break;
+			} catch (const tf2::TransformException& e){
+				ROS_WARN_STREAM(e.what());
+			}
 		}
 		const Eigen::Vector3d vehicle_position = vehicle_pose.translation();
 		Eigen::Vector3d vehicle_frame_unit_x = vehicle_pose.rotation() * Eigen::Vector3d::UnitX();
 		vehicle_frame_unit_x.z() = 0.0;
 		vehicle_frame_unit_x = vehicle_frame_unit_x.normalized();
 		const Eigen::Vector2d pos2d = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
-
 		//   find the closet point to vehicle on path
 		prev_pos_index_ = boost::range::min_element(
 				path_vector_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
@@ -152,7 +154,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			int index_distance = std::distance(it, prev_pos_index_);
 			if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
 		}else sample_flag_ = true;
-
+		ROS_DEBUG_STREAM("try to generate a path");
 //		set new mark of prev pos index
 		prev_pos_index_ = it;
 //		initial a part of path to publish
@@ -194,6 +196,8 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			pose_ros.pose.position.x = (*ele)[0];
 			pose_ros.pose.position.y = (*ele)[1];
 			part_of_path->poses.emplace_back(pose_ros);
+			if (ele != path_vector_.end()) ele++;
+			else ele = path_vector_.begin();
 		}
 
 		interface_.path_publisher.publish(part_of_path);
