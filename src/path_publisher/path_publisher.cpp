@@ -95,27 +95,27 @@ void PathPublisher::samplePath(){
 	ROS_DEBUG_STREAM("noise of radius: " << noise);
 //generate first kind of sample path, radius 1.5 (m)
 	r = 1.5 + noise;
-	for(double angle = 0.; angle < M_PI; angle += delta){
+	for(double angle = M_PI; angle > 0.; angle -= delta){
 		samplePath_[0].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r, 0.0));
 	}
 //	generate second kind of sample path, radius 3 (m)
 	r = 3. + noise;
-	for(double angle = M_PI/4.; angle < M_PI*3./4.; angle += delta){
+	for(double angle = 3*M_PI/4.; angle > M_PI/4.; angle -= delta){
 		samplePath_[1].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r, 0.0));
 	}
 //	generate third kind of sample path, radius infinit (m)
-	for(double d = 3.*M_PI/4.; d > -3*M_PI/4.; d -= 0.02){
+	for(double d = -3.*M_PI/4.; d < 3*M_PI/4.; d += 0.02){
 		samplePath_[2].push_back(Eigen::Vector3d(d, 0., 0.));
 	}
 //	generate fourth kind of sample path, radius 3 (m)
 	r = 3. + noise;
-	for(double angle = 7.*M_PI/4.; angle > 5.*M_PI/4.; angle -= delta){
+	for(double angle = 5.*M_PI/4.; angle < 7.*M_PI/4.; angle += delta){
 		samplePath_[3].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r + r, 0.0));
 	}
 
 //	generate fifth kind of sample path, radius 1.5 (m)
 	r = 1.5 + noise;
-	for(double angle = 2.*M_PI; angle > M_PI; angle -= delta){
+	for(double angle = M_PI; angle < 2*M_PI; angle += delta){
 		samplePath_[4].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r + r, 0.0));
 	}
 	ROS_DEBUG_STREAM("first path of sample path has length: " << samplePath_[0].size());
