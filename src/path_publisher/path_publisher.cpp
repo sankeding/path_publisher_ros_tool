@@ -48,7 +48,7 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 			map_.getVertexMeters(1, i, x, y);
 			pose_ros.pose.position.x = x;
 			pose_ros.pose.position.y = y;
-			path_vector_.emplace_back(Eigen::Vector2d(x, y));
+			path_vector_whole_.emplace_back(Eigen::Vector2d(x, y));
 			path_->poses.emplace_back(pose_ros);
 		}
 		ROS_DEBUG_STREAM("load road finished." << std::endl <<
@@ -73,11 +73,17 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 		vehicle_frame_unit_x = vehicle_frame_unit_x.normalized();
 		const Eigen::Vector2d pos2d = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
 		//   find the closet point to vehicle on path
-		prev_pos_index_ = boost::range::min_element(
-				path_vector_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+		prev_pos_whole_index_ = boost::range::min_element(
+				path_vector_whole_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
 			return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
 		});
-
+		std::vector<Eigen::Vector2d>::iterator path_start, path_end;
+		setCliper(prev_pos_whole_index_, path_vector_whole_, path_start, path_end);
+		clipPath(path_start, path_end, path_vector_whole_, path_vector_, part_of_path_);
+		prev_pos_index_ = boost::range::min_element(
+						path_vector_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+					return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
+				});
     }
 
     timer_ = nhPrivate.createTimer(ros::Rate(interface_.timer_rate), &PathPublisher::callbackTimer, this);
@@ -145,62 +151,40 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
 		return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
 	});
+	int index_distance = std::distance(prev_pos_index_, it);
 
 	if (interface_.mode == "test"){
 //    decide to pubnish a new path or not
 //		initial path at least once
 		if (sample_flag_){
 			//		if still not drive so far abandon to pubnish new path
-			int index_distance = std::distance(it, prev_pos_index_);
 			if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
-		}else sample_flag_ = true;
+		}else{
+			sample_flag_ = true;
+			interface_.path_publisher.publish(part_of_path_);
+			return;
+		}
 		ROS_DEBUG_STREAM("try to generate a path");
-//		set new mark of prev pos index
-		prev_pos_index_ = it;
 //		initial a part of path to publish
-		nav_msgs::Path::Ptr part_of_path{new nav_msgs::Path};
 		path_->header.stamp = timer_event.current_expected;
-		part_of_path->header = path_->header;
-		//initial pose message
-		geometry_msgs::PoseStamped pose_ros;
-		pose_ros.pose.orientation.x = 0.0;
-		pose_ros.pose.orientation.y = 0.0;
-		pose_ros.pose.orientation.z = 0.0;
-		pose_ros.pose.orientation.w = 0.0;
-		pose_ros.pose.position.z = 0.0;
-		pose_ros.header = path_->header;
-
 //		clip a part of path to publish
-		auto path_start = it;
-//		find the beginning of this part first
-		for(--path_start; path_start != it;){
-			if ((*path_start - *it).norm() > interface_.path_length / 2.0)
-				break;
-//			link end to start
-			if (path_start != path_vector_.begin())
-				path_start--;
-			else path_start = path_vector_.end();
+		std::vector<Eigen::Vector2d>::iterator path_start;
+		std::vector<Eigen::Vector2d>::iterator path_end;
+//		reset prev pose whole index
+		for(int i = 0; i < index_distance; i++){
+			if (prev_pos_whole_index_ != path_vector_whole_.end())
+				prev_pos_whole_index_++;
+			else
+				prev_pos_whole_index_ = path_vector_whole_.begin();
 		}
-//		find the end of this part
-		auto path_end = it;
-		for(++path_end; path_end != it;){
-			if((*path_end - *it).norm() > interface_.path_length / 2.0)
-				break;
-//			link end to start
-			if (path_end != path_vector_.end())
-				path_end++;
-			else path_end = path_vector_.begin();
-		}
-//		save the part of path
-		for(auto ele = path_start; ele != path_end;){
-			pose_ros.pose.position.x = (*ele)[0];
-			pose_ros.pose.position.y = (*ele)[1];
-			part_of_path->poses.emplace_back(pose_ros);
-			if (ele != path_vector_.end()) ele++;
-			else ele = path_vector_.begin();
-		}
-
-		interface_.path_publisher.publish(part_of_path);
+		setCliper(prev_pos_whole_index_, path_vector_whole_, path_start, path_end);
+		clipPath(path_start, path_end, path_vector_whole_, path_vector_, part_of_path_);
+		//		set new mark of prev pos index
+		prev_pos_index_ = boost::range::min_element(
+					path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+				return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
+			});
+		interface_.path_publisher.publish(part_of_path_);
 	}else if (interface_.mode == "train"){
 //		flag to ensure sample path at least to be initialized once
 		if (sample_flag_){
@@ -251,6 +235,58 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 //		ROS_DEBUG_STREAM("publish a path of " << path_->poses.size() << " long.");
 		interface_.path_publisher.publish(path_);
 	}
+}
+
+void PathPublisher::clipPath(std::vector<Eigen::Vector2d>::iterator& source_start,
+							std::vector<Eigen::Vector2d>::iterator& source_end,
+							std::vector<Eigen::Vector2d>& source,
+							std::vector<Eigen::Vector2d>& dest,
+							nav_msgs::Path::Ptr path_ptr){
+	//initial pose message
+	geometry_msgs::PoseStamped pose_ros;
+	pose_ros.pose.orientation.x = 0.0;
+	pose_ros.pose.orientation.y = 0.0;
+	pose_ros.pose.orientation.z = 0.0;
+	pose_ros.pose.orientation.w = 0.0;
+	pose_ros.pose.position.z = 0.0;
+	pose_ros.header = path_->header;
+	dest.clear();
+	path_ptr.reset(new nav_msgs::Path);
+	path_ptr->header = path_->header;
+	for(auto ele = source_start; ele != source_end;){
+		dest.emplace_back(*ele);
+		pose_ros.pose.position.x = (*ele)[0];
+		pose_ros.pose.position.y = (*ele)[1];
+		path_ptr->poses.emplace_back(pose_ros);
+		if (ele == source.end()) ele = source.begin();
+		else ele++;
+	}
+}
+
+void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::vector<Eigen::Vector2d>& source, std::vector<Eigen::Vector2d>::iterator& it_start, std::vector<Eigen::Vector2d>::iterator& it_end){
+//		clip a part of path to publish
+	auto path_start = it;
+//		find the beginning of this part first
+	for(--path_start; path_start != it;){
+		if ((*path_start - *it).norm() > interface_.path_length / 2.0)
+			break;
+//			link end to start
+		if (path_start != source.begin())
+			path_start--;
+		else path_start = source.end();
+	}
+	it_start = path_start;
+//		find the end of this part
+	auto path_end = it;
+	for(++path_end; path_end != it;){
+		if((*path_end - *it).norm() > interface_.path_length / 2.0)
+			break;
+//			link end to start
+		if (path_end != source.end())
+			path_end++;
+		else path_end = source.begin();
+	}
+	it_end = path_end;
 }
 
 /**
