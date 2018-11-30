@@ -36,6 +36,7 @@ gen.add_verbosity_param(configurable=True)
 
 # Your Params here
 gen.add("timer_rate", paramtype='double', description="publisher frequency", default=5, min=0, max=10, configurable=True, global_scope=False)
+gen.add("kos_shift", paramtype='double', description="distance from vehicle frame id referred position to real vehicle center point", default=-0.2, min=-0.5, max=0.5, configurable=True, global_scope=False)
 gen.add("delta_sigma", paramtype='double', description="delta angle to generate sample path", default=0.01, min=0, max=0.1, configurable=True, global_scope=False)
 gen.add("path_to_map", paramtype='std::string', description="directory to map file", default="")
 gen.add("mode", paramtype='std::string', description="mode of path publisher, train or test")
@@ -44,6 +45,9 @@ gen.add("frame_id_map", paramtype='std::string', description="Map frame ID", def
 gen.add("frame_id_vehicle", paramtype='std::string', description="Vehicle frame ID", default="vehicle")
 gen.add("center_x", paramtype='double', description="x axis value of center point of map", default=0.0, min=0, max=15, configurable=True, global_scope=False)
 gen.add("center_y", paramtype='double', description="y axis value of center point of map", default=0.0, min=0, max=15, configurable=True, global_scope=False)
+gen.add("path_length", paramtype='double', description="pubnished length of a path", default=6., min=1, max=10, configurable=True, global_scope=False)
+gen.add("drive_distance", paramtype='double', description="drive distance before update path", default=1., min=0.1, max=3, configurable=True, global_scope=False)
+gen.add("point_distance", paramtype='double', description="distance between two points", default=0.02, min=0.005, max=0.5, configurable=True, global_scope=False)
 gen.add("radius_noise", paramtype='double', description="standard deviation of noise to radius when generate sample map", default=0.2, min=0, max=0.5, configurable=True, global_scope=False)
 gen.add("rotation_noise", paramtype='double', description="standard deviation of noise to rotation when process sample map", default=10, min=0, max=20, configurable=True, global_scope=False)
 

@@ -40,6 +40,9 @@ private:
     std::vector<std::vector<Eigen::Vector3d>> samplePath_{5};
     RoadMap map_{0., 0.};
     Eigen::Vector3d center_;
+    std::vector<Eigen::Vector2d> path_vector_;
+    std::vector<Eigen::Vector2d>::iterator prev_pos_index_;
+    bool sample_flag_ = false;
 
 };
 } // namespace path_publisher_ros_tool

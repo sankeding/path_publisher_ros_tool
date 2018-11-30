@@ -20,5 +20,8 @@ center_x: 3.0
 center_y: 5.0
 radius_noise: 0.2
 rotation_noise: 20
-timer_rate: 5
+path_length: 6		#whole path has to be larger than this length
+drive_distance: 1.5     #recommand to be half of path_length
+point_distance: 0.02
+timer_rate: 20
 verbosity: debug

@@ -48,9 +48,34 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 			map_.getVertexMeters(1, i, x, y);
 			pose_ros.pose.position.x = x;
 			pose_ros.pose.position.y = y;
+			path_vector_.emplace_back(Eigen::Vector2d(x, y));
 			path_->poses.emplace_back(pose_ros);
 		}
 		ROS_DEBUG_STREAM("load road finished.");
+
+//		set prev_pos_index mark
+		//    initial vehicle pose
+		Eigen::Affine3d vehicle_pose;
+		try {
+			const geometry_msgs::TransformStamped tf_ros =
+				tfBuffer_.lookupTransform(interface_.frame_id_map, interface_.frame_id_vehicle, ros::Time(0));
+			vehicle_pose = tf2::transformToEigen(tf_ros);
+		} catch (const tf2::TransformException& e){
+			ROS_WARN_STREAM(e.what());
+			return;
+		}
+		const Eigen::Vector3d vehicle_position = vehicle_pose.translation();
+		Eigen::Vector3d vehicle_frame_unit_x = vehicle_pose.rotation() * Eigen::Vector3d::UnitX();
+		vehicle_frame_unit_x.z() = 0.0;
+		vehicle_frame_unit_x = vehicle_frame_unit_x.normalized();
+		const Eigen::Vector2d pos2d = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
+
+		//   find the closet point to vehicle on path
+		prev_pos_index_ = boost::range::min_element(
+				path_vector_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+			return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
+		});
+
     }
 
     timer_ = nhPrivate.createTimer(ros::Rate(interface_.timer_rate), &PathPublisher::callbackTimer, this);
@@ -97,13 +122,91 @@ void PathPublisher::samplePath(){
 }
 
 void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
-	path_->header.stamp = timer_event.current_expected;
+	//get the vehicle position
+	Eigen::Affine3d vehicle_pose;
+	try {
+		const geometry_msgs::TransformStamped tf_ros =
+			tfBuffer_.lookupTransform(interface_.frame_id_map, interface_.frame_id_vehicle, ros::Time(0));
+		vehicle_pose = tf2::transformToEigen(tf_ros);
+	} catch (const tf2::TransformException& e){
+		ROS_WARN_STREAM(e.what());
+		return;
+	}
+	//shift vehicle position towards x direction kos_shift long
+	const Eigen::Vector3d vehicle_position = vehicle_pose.translation();
+	Eigen::Vector3d vehicle_frame_unit_x = vehicle_pose.rotation() * Eigen::Vector3d::UnitX();
+	vehicle_frame_unit_x.z() = 0.0;
+	vehicle_frame_unit_x = vehicle_frame_unit_x.normalized();
+	const Eigen::Vector2d shifted_vehicle_position = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
+//   find the closet point to vehicle on path
+	auto it = boost::range::min_element(
+			path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+		return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
+	});
+
 	if (interface_.mode == "test"){
-//		ROS_DEBUG_STREAM("there are " << path_->poses.size() << "points.");
-		interface_.path_publisher.publish(path_);
+//    decide to pubnish a new path or not
+
+//		if still not drive so far abandon to pubnish new path
+		int index_distance = std::distance(it, prev_pos_index_);
+		if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
+
+//		set new mark of prev pos index
+		prev_pos_index_ = it;
+//		initial a part of path to publish
+		nav_msgs::Path::Ptr part_of_path{new nav_msgs::Path};
+		path_->header.stamp = timer_event.current_expected;
+		part_of_path->header = path_->header;
+		//initial pose message
+		geometry_msgs::PoseStamped pose_ros;
+		pose_ros.pose.orientation.x = 0.0;
+		pose_ros.pose.orientation.y = 0.0;
+		pose_ros.pose.orientation.z = 0.0;
+		pose_ros.pose.orientation.w = 0.0;
+		pose_ros.pose.position.z = 0.0;
+		pose_ros.header = path_->header;
+
+//		clip a part of path to publish
+		auto path_start = it;
+//		find the beginning of this part first
+		for(--path_start; path_start != it;){
+			if ((*path_start - *it).norm() > interface_.path_length / 2.0)
+				break;
+//			link end to start
+			if (path_start != path_vector_.begin())
+				path_start--;
+			else path_start = path_vector_.end();
+		}
+//		find the end of this part
+		auto path_end = it;
+		for(++path_end; path_end != it;){
+			if((*path_end - *it).norm() > interface_.path_length / 2.0)
+				break;
+//			link end to start
+			if (path_end != path_vector_.end())
+				path_end++;
+			else path_end = path_vector_.begin();
+		}
+//		save the part of path
+		for(auto ele = path_start; ele != path_end;){
+			pose_ros.pose.position.x = (*ele)[0];
+			pose_ros.pose.position.y = (*ele)[1];
+			part_of_path->poses.emplace_back(pose_ros);
+		}
+
+		interface_.path_publisher.publish(part_of_path);
 	}else if (interface_.mode == "train"){
+//		flag to ensure sample path at least to be initialized once
+		if (sample_flag_){
+	//		if still not drive enough far abandon to pubnish new path
+			int index_distance = std::distance(path_vector_.begin(), it);
+			if ((index_distance / double(path_vector_.size())) < 0.75) return;
+		}else sample_flag_ = true;
+
+//		generate a new path and publish
 		samplePath();
 		path_.reset(new nav_msgs::Path);
+		path_vector_.clear();
 		path_->header.frame_id = interface_.frame_id_map;
 		path_->header.stamp = timer_event.current_expected;
 //initial pose message
@@ -114,16 +217,6 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 		pose_ros.pose.orientation.w = 0.0;
 		pose_ros.pose.position.z = 0.0;
 		pose_ros.header = path_->header;
-//get the vehicle position
-		Eigen::Affine3d vehicle_pose;
-		try {
-			const geometry_msgs::TransformStamped tf_ros =
-				tfBuffer_.lookupTransform(interface_.frame_id_map, interface_.frame_id_vehicle, ros::Time(0));
-			vehicle_pose = tf2::transformToEigen(tf_ros);
-		} catch (const tf2::TransformException& e){
-			ROS_WARN_STREAM(e.what());
-			return;
-		}
 //transform the path to map frame
 		static std::normal_distribution<double> n(0, M_PI*interface_.rotation_noise/360.);
 		static std::default_random_engine e;
@@ -147,8 +240,9 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			pose_ros.pose.position.x = p_to_transform[0];
 			pose_ros.pose.position.y = p_to_transform[1];
 			path_->poses.emplace_back(pose_ros);
+			path_vector_.emplace_back(Eigen::Vector2d(p_to_transform[0], p_to_transform[1]));
 		}
-		ROS_DEBUG_STREAM("publish a path of " << path_->poses.size() << " long.");
+//		ROS_DEBUG_STREAM("publish a path of " << path_->poses.size() << " long.");
 		interface_.path_publisher.publish(path_);
 	}
 }
