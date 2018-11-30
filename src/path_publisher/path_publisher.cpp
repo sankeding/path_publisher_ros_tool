@@ -146,10 +146,12 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 
 	if (interface_.mode == "test"){
 //    decide to pubnish a new path or not
-
-//		if still not drive so far abandon to pubnish new path
-		int index_distance = std::distance(it, prev_pos_index_);
-		if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
+//		initial path at least once
+		if (sample_flag_){
+			//		if still not drive so far abandon to pubnish new path
+			int index_distance = std::distance(it, prev_pos_index_);
+			if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
+		}else sample_flag_ = true;
 
 //		set new mark of prev pos index
 		prev_pos_index_ = it;
