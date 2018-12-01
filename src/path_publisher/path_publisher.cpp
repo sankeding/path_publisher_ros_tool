@@ -106,27 +106,27 @@ void PathPublisher::samplePath(){
 	ROS_DEBUG_STREAM("noise of radius: " << noise);
 //generate first kind of sample path, radius 1.5 (m)
 	r = 1.5 + noise;
-	for(double angle = M_PI; angle > 0.; angle -= delta){
+	for(double angle = 3.*M_PI/4.; angle > -M_PI/4.; angle -= delta){
 		samplePath_[0].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r, 0.0));
 	}
 //	generate second kind of sample path, radius 3 (m)
 	r = 3. + noise;
-	for(double angle = 3*M_PI/4.; angle > M_PI/4.; angle -= delta){
+	for(double angle = 5.*M_PI/8.; angle > M_PI/8.; angle -= delta){
 		samplePath_[1].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r, 0.0));
 	}
 //	generate third kind of sample path, radius infinit (m)
-	for(double d = -3.*M_PI/4.; d < 3*M_PI/4.; d += 0.02){
+	for(double d = -3.*M_PI/8.; d < 9.*M_PI/8.; d += 0.02){
 		samplePath_[2].push_back(Eigen::Vector3d(d, 0., 0.));
 	}
 //	generate fourth kind of sample path, radius 3 (m)
 	r = 3. + noise;
-	for(double angle = 5.*M_PI/4.; angle < 7.*M_PI/4.; angle += delta){
+	for(double angle = 11.*M_PI/8.; angle < 15.*M_PI/8.; angle += delta){
 		samplePath_[3].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r + r, 0.0));
 	}
 
 //	generate fifth kind of sample path, radius 1.5 (m)
 	r = 1.5 + noise;
-	for(double angle = M_PI; angle < 2*M_PI; angle += delta){
+	for(double angle = 5.*M_PI/4.; angle < 9.*M_PI/4.; angle += delta){
 		samplePath_[4].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r + r, 0.0));
 	}
 	ROS_DEBUG_STREAM("first path of sample path has length: " << samplePath_[0].size());
@@ -175,7 +175,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 		std::vector<Eigen::Vector2d>::iterator path_end;
 //		reset prev pose whole index
 		for(int i = 0; i < index_distance; i++){
-			if (prev_pos_whole_index_ != path_vector_whole_.end())
+			if (prev_pos_whole_index_ != path_vector_whole_.end() - 1)
 				prev_pos_whole_index_++;
 			else
 				prev_pos_whole_index_ = path_vector_whole_.begin();
@@ -261,7 +261,7 @@ void PathPublisher::clipPath(std::vector<Eigen::Vector2d>::iterator& source_star
 		pose_ros.pose.position.x = (*ele)[0];
 		pose_ros.pose.position.y = (*ele)[1];
 		path_ptr->poses.emplace_back(pose_ros);
-		if (ele == source.end()) ele = source.begin();
+		if (ele == source.end() - 1) ele = source.begin();
 		else ele++;
 	}
 }
@@ -271,21 +271,21 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
 	auto path_start = it;
 //		find the beginning of this part first
 	for(--path_start; path_start != it;){
-		if ((*path_start - *it).norm() > interface_.path_length / 2.0)
+		if ((std::distance(path_start, it) * interface_.point_distance) > interface_.path_length/4.0)
 			break;
 //			link end to start
 		if (path_start != source.begin())
 			path_start--;
-		else path_start = source.end();
+		else path_start = source.end() - 1;
 	}
 	it_start = path_start;
 //		find the end of this part
 	auto path_end = it;
 	for(++path_end; path_end != it;){
-		if((*path_end - *it).norm() > interface_.path_length / 2.0)
+		if((std::distance(path_end, it) * interface_.point_distance) > 3.0*interface_.path_length/4.0)
 			break;
 //			link end to start
-		if (path_end != source.end())
+		if (path_end != source.end() - 1)
 			path_end++;
 		else path_end = source.begin();
 	}
