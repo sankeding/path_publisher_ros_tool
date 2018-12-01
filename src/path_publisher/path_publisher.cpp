@@ -261,8 +261,9 @@ void PathPublisher::clipPath(std::vector<Eigen::Vector2d>::iterator& source_star
 		pose_ros.pose.position.x = (*ele)[0];
 		pose_ros.pose.position.y = (*ele)[1];
 		path_ptr->poses.emplace_back(pose_ros);
-		if (ele == source.end() - 1) ele = source.begin();
-		else ele++;
+		if (ele == source.end() - 1){
+			ele = source.begin();
+		}else ele++;
 	}
 }
 
@@ -274,9 +275,9 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
 		if ((std::distance(path_start, it) * interface_.point_distance) > interface_.path_length/4.0)
 			break;
 //			link end to start
-		if (path_start != source.begin())
+		if (path_start != source.begin()){
 			path_start--;
-		else path_start = source.end() - 1;
+		}else path_start = source.end() - 1;
 	}
 	it_start = path_start;
 //		find the end of this part
@@ -285,9 +286,9 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
 		if((std::distance(path_end, it) * interface_.point_distance) > 3.0*interface_.path_length/4.0)
 			break;
 //			link end to start
-		if (path_end != source.end() - 1)
+		if (path_end != source.end() - 1){
 			path_end++;
-		else path_end = source.begin();
+		}else path_end = source.begin();
 	}
 	it_end = path_end;
 }
