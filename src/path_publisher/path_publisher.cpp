@@ -151,11 +151,11 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
 		return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
 	});
-	int index_distance = std::distance(prev_pos_index_, it);
 
 	if (interface_.mode == "test"){
 //    decide to pubnish a new path or not
 //		initial path at least once
+		int index_distance = std::distance(prev_pos_index_, it);
 		if (sample_flag_){
 			//		if still not drive so far abandon to pubnish new path
 			if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
