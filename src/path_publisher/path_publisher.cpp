@@ -273,25 +273,35 @@ void PathPublisher::clipPath(std::vector<Eigen::Vector2d>::iterator& source_star
 void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::vector<Eigen::Vector2d>& source, std::vector<Eigen::Vector2d>::iterator& it_start, std::vector<Eigen::Vector2d>::iterator& it_end){
 //		clip a part of path to publish
 	auto path_start = it;
+	int index_dis = 1;
 //		find the beginning of this part first
 	for(--path_start; path_start != it;){
-		if (std::abs((std::distance(path_start, it) * interface_.point_distance)) > interface_.path_length/4.0)
+		if ((index_dis * interface_.point_distance) > interface_.path_length/4.0)
 			break;
 //			link end to start
 		if (path_start != source.begin()){
 			path_start--;
-		}else path_start = source.end() - 1;
+			index_dis++;
+		}else{
+			path_start = source.end() - 1;
+			index_dis++;
+		}
 	}
 	it_start = path_start;
 //		find the end of this part
 	auto path_end = it;
+	index_dis = 1;
 	for(++path_end; path_end != it;){
-		if(std::abs((std::distance(it, path_end) * interface_.point_distance)) > 3.0*interface_.path_length/4.0)
+		if((index_dis * interface_.point_distance) > 3.0*interface_.path_length/4.0)
 			break;
 //			link end to start
 		if (path_end != source.end() - 1){
 			path_end++;
-		}else path_end = source.begin();
+			index_dis++;
+		}else{
+			index_dis++;
+			path_end = source.begin();
+		}
 	}
 	it_end = path_end;
 }
