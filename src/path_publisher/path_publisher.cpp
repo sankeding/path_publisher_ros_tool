@@ -80,6 +80,9 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 		std::vector<Eigen::Vector2d>::iterator path_start, path_end;
 		setCliper(prev_pos_whole_index_, path_vector_whole_, path_start, path_end);
 		clipPath(path_start, path_end, path_vector_whole_, path_vector_, part_of_path_);
+		ROS_DEBUG_STREAM("whole path length: " << path_vector_whole_.size() << std::endl <<
+							"part of path length: " << path_vector_.size() << std::endl <<
+							"path messsage length: " << part_of_path_->poses.size());
 		prev_pos_index_ = boost::range::min_element(
 						path_vector_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
 					return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
