@@ -275,7 +275,7 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
 	auto path_start = it;
 //		find the beginning of this part first
 	for(--path_start; path_start != it;){
-		if ((std::distance(path_start, it) * interface_.point_distance) > interface_.path_length/4.0)
+		if (std::abs((std::distance(path_start, it) * interface_.point_distance)) > interface_.path_length/4.0)
 			break;
 //			link end to start
 		if (path_start != source.begin()){
@@ -286,7 +286,7 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
 //		find the end of this part
 	auto path_end = it;
 	for(++path_end; path_end != it;){
-		if((std::distance(it, path_end) * interface_.point_distance) > 3.0*interface_.path_length/4.0)
+		if(std::abs((std::distance(it, path_end) * interface_.point_distance)) > 3.0*interface_.path_length/4.0)
 			break;
 //			link end to start
 		if (path_end != source.end() - 1){
