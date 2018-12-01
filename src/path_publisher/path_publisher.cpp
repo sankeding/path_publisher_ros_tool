@@ -167,7 +167,6 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			interface_.path_publisher.publish(part_of_path_);
 			return;
 		}
-		ROS_DEBUG_STREAM("try to generate a path");
 //		initial a part of path to publish
 		path_->header.stamp = timer_event.current_expected;
 //		clip a part of path to publish
@@ -181,6 +180,10 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 				prev_pos_whole_index_ = path_vector_whole_.begin();
 		}
 		setCliper(prev_pos_whole_index_, path_vector_whole_, path_start, path_end);
+		ROS_DEBUG_STREAM("pos index moving: " << index_distance << std::endl<<
+								"current whole path index mark: " << std::distance(path_vector_whole_.begin(), prev_pos_whole_index_) << std::endl <<
+								"current path start index: " << std::distance(path_vector_whole_.begin(), path_start) << std::endl <<
+								"current path end index: " << std::distance(path_vector_whole_.begin(), path_end));
 		clipPath(path_start, path_end, path_vector_whole_, path_vector_, part_of_path_);
 		//		set new mark of prev pos index
 		prev_pos_index_ = boost::range::min_element(
