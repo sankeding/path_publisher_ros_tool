@@ -222,7 +222,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 		auto const& path_vector = boost::range::min_element(
 				samplePath_, [&](const std::vector<Eigen::Vector3d>& lp,
 								const std::vector<Eigen::Vector3d>& rp){
-			Eigen::Vector3d lpP(lp.front()), rpP(rp.front());
+			Eigen::Vector3d lpP(lp.back()), rpP(rp.back());
 			return ((NewTransform * Eigen::Vector4d(lpP[0], lpP[1], lpP[2], 1)).head<3>() - center_).squaredNorm()<
 					((NewTransform * Eigen::Vector4d(rpP[0], rpP[1], rpP[2], 1)).head<3>() - center_).squaredNorm();
 		});
@@ -283,7 +283,7 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
 //		find the end of this part
 	auto path_end = it;
 	for(++path_end; path_end != it;){
-		if((std::distance(path_end, it) * interface_.point_distance) > 3.0*interface_.path_length/4.0)
+		if((std::distance(it, path_end) * interface_.point_distance) > 3.0*interface_.path_length/4.0)
 			break;
 //			link end to start
 		if (path_end != source.end() - 1){
