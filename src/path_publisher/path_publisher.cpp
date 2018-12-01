@@ -244,7 +244,7 @@ void PathPublisher::clipPath(std::vector<Eigen::Vector2d>::iterator& source_star
 							std::vector<Eigen::Vector2d>::iterator& source_end,
 							std::vector<Eigen::Vector2d>& source,
 							std::vector<Eigen::Vector2d>& dest,
-							nav_msgs::Path::Ptr path_ptr){
+							nav_msgs::Path::Ptr& path_ptr){
 	//initial pose message
 	geometry_msgs::PoseStamped pose_ros;
 	pose_ros.pose.orientation.x = 0.0;

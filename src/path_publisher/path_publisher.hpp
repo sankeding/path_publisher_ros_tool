@@ -31,7 +31,7 @@ private:
     			std::vector<Eigen::Vector2d>::iterator& source_end,
 				std::vector<Eigen::Vector2d>& source,
 				std::vector<Eigen::Vector2d>& dest,
-				nav_msgs::Path::Ptr path_ptr);
+				nav_msgs::Path::Ptr& path_ptr);
     void setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::vector<Eigen::Vector2d>& source, std::vector<Eigen::Vector2d>::iterator& start, std::vector<Eigen::Vector2d>::iterator& it_end);
 
     Interface interface_;
