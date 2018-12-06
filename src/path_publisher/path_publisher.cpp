@@ -4,8 +4,13 @@
 #include <boost/algorithm/clamp.hpp>
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/range/algorithm/min_element.hpp>
+#include "path_publisher_ros_tool/dis_angle.h"
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/opencv.hpp>
 
 namespace path_publisher_ros_tool {
+
+using Reward = path_publisher_ros_tool::dis_angle;
 
 PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate)
         : interface_{nhPrivate}, reconfigureServer_{nhPrivate} {
@@ -40,7 +45,21 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 		ROS_ERROR_STREAM("please check you spell of mode.");
 		ros::shutdown();
 		return;
-    }else if (interface_.mode == "test"){
+    }else{
+    	//    initial vehicle pose
+		Eigen::Affine3d vehicle_pose;
+		while(1){
+			try {
+				const geometry_msgs::TransformStamped tf_ros =
+					tfBuffer_.lookupTransform(interface_.frame_id_map, interface_.frame_id_vehicle, ros::Time(0));
+				vehicle_pose = tf2::transformToEigen(tf_ros);
+				break;
+			} catch (const tf2::TransformException& e){
+				ROS_WARN_STREAM(e.what());
+			}
+		}
+		if (interface_.mode == "test"){
+
 //  load path from .osm file
 		map_.loadFromFile(interface_.path_to_map + interface_.map_name);
 		double x, y;
@@ -55,18 +74,6 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 				"the whole path length: " << path_->poses.size());
 
 //		set prev_pos_index mark
-		//    initial vehicle pose
-		Eigen::Affine3d vehicle_pose;
-		while(1){
-			try {
-				const geometry_msgs::TransformStamped tf_ros =
-					tfBuffer_.lookupTransform(interface_.frame_id_map, interface_.frame_id_vehicle, ros::Time(0));
-				vehicle_pose = tf2::transformToEigen(tf_ros);
-				break;
-			} catch (const tf2::TransformException& e){
-				ROS_WARN_STREAM(e.what());
-			}
-		}
 		const Eigen::Vector3d vehicle_position = vehicle_pose.translation();
 		Eigen::Vector3d vehicle_frame_unit_x = vehicle_pose.rotation() * Eigen::Vector3d::UnitX();
 		vehicle_frame_unit_x.z() = 0.0;
@@ -87,11 +94,53 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 						path_vector_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
 					return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
 				});
-    }
+		}else if (interface_.mode == "train"){
+	//		generate a new path and publish
+			samplePath();
+	//initial pose message
+			geometry_msgs::PoseStamped pose_ros;
+			pose_ros.pose.orientation.x = 0.0;
+			pose_ros.pose.orientation.y = 0.0;
+			pose_ros.pose.orientation.z = 0.0;
+			pose_ros.pose.orientation.w = 0.0;
+			pose_ros.pose.position.z = 0.0;
+			pose_ros.header = path_->header;
+	//transform the path to map frame
+			static std::normal_distribution<double> n(0, M_PI*interface_.rotation_noise/360.);
+			static std::default_random_engine e;
+			double noise = n(e);
+			noise = boost::algorithm::clamp(noise, -M_PI*2./18., M_PI*2./18.);
+			ROS_DEBUG_STREAM("noise of angle: " << noise);
+			Eigen::Affine3d NoiseTransform(Eigen::AngleAxisd(noise, Eigen::Vector3d::UnitZ()));
+			Eigen::Matrix4d NewTransform = (vehicle_pose*NoiseTransform).matrix();
+	//find the sample path whose end position is the closet to center of map
+			auto const& path_vector = boost::range::min_element(
+					samplePath_, [&](const std::vector<Eigen::Vector3d>& lp,
+									const std::vector<Eigen::Vector3d>& rp){
+				Eigen::Vector3d lpP(lp.back()), rpP(rp.back());
+				return ((NewTransform * Eigen::Vector4d(lpP[0], lpP[1], lpP[2], 1)).head<3>() - center_).squaredNorm()<
+						((NewTransform * Eigen::Vector4d(rpP[0], rpP[1], rpP[2], 1)).head<3>() - center_).squaredNorm();
+			});
+	//		nav_msgs::Path::Ptr path;
+			for(const auto& p: *path_vector){
+				Eigen::Vector4d p_to_transform(p[0], p[1], p[2], 1);
+				p_to_transform = NewTransform * p_to_transform;
+				pose_ros.pose.position.x = p_to_transform[0];
+				pose_ros.pose.position.y = p_to_transform[1];
+				path_->poses.emplace_back(pose_ros);
+				path_vector_.emplace_back(Eigen::Vector2d(p_to_transform[0], p_to_transform[1]));
+			}
+		}
+	}
 
     timer_ = nhPrivate.createTimer(ros::Rate(interface_.timer_rate), &PathPublisher::callbackTimer, this);
 
     rosinterface_handler::showNodeInfo();
+}
+
+double signedAngleBetween(const Eigen::Vector3d& a, const Eigen::Vector3d& b) {
+	const double vz = boost::math::sign(a.cross(b).z());
+	return vz * std::acos(a.normalized().dot(b.normalized()));
 }
 
 void PathPublisher::samplePath(){
@@ -132,6 +181,17 @@ void PathPublisher::samplePath(){
 	ROS_DEBUG_STREAM("first path of sample path has length: " << samplePath_[0].size());
 }
 
+bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose){
+	std::vector<Eigen::Vector2d> points_list;
+	Eigen::Vector2d vehicle_pose2d(vehicle_pose.translation().head<2>());
+	for (const auto& p: path_vector_){
+//		find the points within image covered area
+		if ((p - vehicle_pose2d).norm() < interface_.image_radius) points_list.emplace_back(p);
+	}
+
+	return false;
+}
+
 void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	//get the vehicle position
 	Eigen::Affine3d vehicle_pose;
@@ -154,6 +214,22 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
 		return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
 	});
+	Reward reward_msg;
+	const double dis = (shifted_vehicle_position - *it).norm();
+	Eigen::Vector3d target_direction;
+	target_direction.head<2>() = *(it + 3) - *(it - 3);
+	target_direction.z() = 0.;
+	Eigen::Vector3d shifted_v_p_3d;
+	shifted_v_p_3d.head<2>() = shifted_vehicle_position;
+	shifted_v_p_3d.z() = 0.;
+	Eigen::Vector3d closet_3d;
+	closet_3d.head<2>() = *it;
+	closet_3d.z() = 0.;
+	 const double vz_dist =
+	        boost::math::sign(target_direction.cross(closet_3d - shifted_v_p_3d).z());
+	reward_msg.angle = signedAngleBetween(vehicle_frame_unit_x, target_direction);
+	reward_msg.dis = vz_dist * dis;
+	interface_.reward_publisher.publish(reward_msg);
 
 	if (interface_.mode == "test"){
 //    decide to pubnish a new path or not
@@ -196,7 +272,9 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 		if (sample_flag_){
 	//		if still not drive enough far abandon to pubnish new path
 			int index_distance = std::distance(path_vector_.begin(), it);
-			if ((index_distance / double(path_vector_.size())) < 0.75) return;
+			ROS_DEBUG_STREAM("local path length: " << path_vector_.size() << std::endl <<
+							"current distance: " << index_distance);
+			if ((index_distance / double(path_vector_.size())) < 0.7) return;
 		}else sample_flag_ = true;
 
 //		generate a new path and publish

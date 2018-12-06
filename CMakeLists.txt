@@ -42,7 +42,7 @@ if (ROS_GENERATE_MESSAGES)
     generate_messages(
         DEPENDENCIES
         #add dependencies here
-        #std_msgs
+        std_msgs
         )
 endif()
 

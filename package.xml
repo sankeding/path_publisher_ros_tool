@@ -41,6 +41,8 @@
   -->
 
   <depend>dynamic_reconfigure</depend>
+  <depend>mrt_opencv</depend>
+  <depend>cv_bridge</depend>
   <depend>message_filters</depend>
   <depend>tf2_ros</depend>
   <depend>eigen</depend>
