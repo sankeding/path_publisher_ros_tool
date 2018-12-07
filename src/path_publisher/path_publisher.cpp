@@ -8,6 +8,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/Image.h>
 
 namespace path_publisher_ros_tool {
 
@@ -182,7 +183,7 @@ void PathPublisher::samplePath(){
 	ROS_DEBUG_STREAM("first path of sample path has length: " << samplePath_[0].size());
 }
 
-bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose){
+bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::TimerEvent& timer_event){
 	std::vector<Eigen::Vector2d> points_list;
 	Eigen::Vector2d vehicle_pose2d(vehicle_pose.translation().head<2>());
 	Eigen::Matrix3d map_to_vehicle(vehicle_pose.rotation().inverse());
@@ -213,18 +214,15 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose){
 		float* imgrow = img.ptr<float>(center_row - rel_row);
 		imgrow[center_col - rel_col] = 1.;
 	}
-	cv::namedWindow("Local Path", cv::WINDOW_AUTOSIZE);
 	cv::imshow("Local Path", img);
-	cv::waitKey(0);
-	ROS_DEBUG_STREAM("image showed");
-
-	cv_bridge::CvImagePtr cv_ptr;
-	cv_ptr->header.stamp = ros::Time::now();
+	cv::waitKey(1);
+	cv_bridge::CvImagePtr cv_ptr{new cv_bridge::CvImage};
+	cv_ptr->header.stamp = timer_event.current_expected;
 //	cv_ptr->header.frame_id = interface_.frame_id_vehicle;
 	cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
 	cv_ptr->image = img;
-//	interface_.image_publisher.publish(cv_ptr);
-
+	cv_ptr->toImageMsg();
+	interface_.image_publisher.publish(cv_ptr);
 	return true;
 }
 
@@ -267,7 +265,8 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	reward_msg.dis = vz_dist * dis;
 	interface_.reward_publisher.publish(reward_msg);
 //	generate the image of local path
-	bool path_in_scope = PathPublisher::imageGenerator(vehicle_pose);
+	bool path_in_scope = PathPublisher::imageGenerator(vehicle_pose, timer_event);
+
 
 	if (interface_.mode == "test"){
 //    decide to pubnish a new path or not
