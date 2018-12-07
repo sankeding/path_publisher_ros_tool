@@ -7,6 +7,7 @@
 #include "path_publisher_ros_tool/dis_angle.h"
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
+#include <sensor_msgs/image_encodings.h>
 
 namespace path_publisher_ros_tool {
 
@@ -184,12 +185,47 @@ void PathPublisher::samplePath(){
 bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose){
 	std::vector<Eigen::Vector2d> points_list;
 	Eigen::Vector2d vehicle_pose2d(vehicle_pose.translation().head<2>());
-	for (const auto& p: path_vector_){
-//		find the points within image covered area
-		if ((p - vehicle_pose2d).norm() < interface_.image_radius) points_list.emplace_back(p);
+	Eigen::Matrix3d map_to_vehicle(vehicle_pose.rotation().inverse());
+	for (auto p: path_vector_){
+//		find the points within image covered area, get the relativ position
+		if ((p - vehicle_pose2d).norm() < interface_.image_radius){
+			p = p - vehicle_pose2d;
+			Eigen::Vector3d pose3d(Eigen::Vector3d::Zero());
+			pose3d.head<2>() = p;
+			pose3d = map_to_vehicle * pose3d;
+			points_list.emplace_back(pose3d.head<2>());
+		}
 	}
 
-	return false;
+	ROS_DEBUG_STREAM(points_list.size() << " points in local scope found");
+
+	if (points_list.size() <= interface_.least_points) return false;
+
+	const int img_cells = std::round(2. * interface_.image_radius / interface_.point_distance);
+	cv::Mat img(img_cells, img_cells, CV_32FC1, cv::Scalar(0));
+
+	int center_col = img_cells / 2;
+	int center_row = img_cells / 2;
+//	fill the pixel
+	for (const auto& p: points_list){
+		int rel_col = std::round(p.y() / interface_.point_distance);
+		int rel_row = std::round(p.x() / interface_.point_distance);
+		float* imgrow = img.ptr<float>(center_row - rel_row);
+		imgrow[center_col - rel_col] = 1.;
+	}
+	cv::namedWindow("Local Path", cv::WINDOW_AUTOSIZE);
+	cv::imshow("Local Path", img);
+	cv::waitKey(0);
+	ROS_DEBUG_STREAM("image showed");
+
+	cv_bridge::CvImagePtr cv_ptr;
+	cv_ptr->header.stamp = ros::Time::now();
+//	cv_ptr->header.frame_id = interface_.frame_id_vehicle;
+	cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
+	cv_ptr->image = img;
+//	interface_.image_publisher.publish(cv_ptr);
+
+	return true;
 }
 
 void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
@@ -230,6 +266,8 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	reward_msg.angle = signedAngleBetween(vehicle_frame_unit_x, target_direction);
 	reward_msg.dis = vz_dist * dis;
 	interface_.reward_publisher.publish(reward_msg);
+//	generate the image of local path
+	bool path_in_scope = PathPublisher::imageGenerator(vehicle_pose);
 
 	if (interface_.mode == "test"){
 //    decide to pubnish a new path or not
@@ -268,8 +306,8 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			});
 		interface_.path_publisher.publish(part_of_path_);
 	}else if (interface_.mode == "train"){
-//		flag to ensure sample path at least to be initialized once
-		if (sample_flag_){
+//		flag to ensure sample path at least to be initialized once, and path in the image scope
+		if (sample_flag_ and path_in_scope){
 	//		if still not drive enough far abandon to pubnish new path
 			int index_distance = std::distance(path_vector_.begin(), it);
 			ROS_DEBUG_STREAM("local path length: " << path_vector_.size() << std::endl <<

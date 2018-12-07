@@ -13,7 +13,7 @@
 # map: {"a": "b", "c": "d"}
 
 map_name: fitted_road_map.osm
-mode: train
+mode: test
 frame_id_map: world
 frame_id_vehicle: vehicle_front_axle
 center_x: 3.0
@@ -26,3 +26,4 @@ point_distance: 0.02
 timer_rate: 20
 verbosity: debug
 image_radius: 2       #it can not be larger than half of path_length
+least_points: 50
