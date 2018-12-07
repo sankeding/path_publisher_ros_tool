@@ -184,12 +184,16 @@ void PathPublisher::samplePath(){
 }
 
 bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::TimerEvent& timer_event){
-	std::vector<Eigen::Vector2d> points_list;
-	Eigen::Vector2d vehicle_pose2d(vehicle_pose.translation().head<2>());
+	const Eigen::Vector3d vehicle_position = vehicle_pose.translation();
+	Eigen::Vector3d vehicle_frame_unit_x = vehicle_pose.rotation() * Eigen::Vector3d::UnitX();
+	vehicle_frame_unit_x.z() = 0.0;
+	vehicle_frame_unit_x = vehicle_frame_unit_x.normalized();
+	const Eigen::Vector2d vehicle_pose2d = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
 	Eigen::Matrix3d map_to_vehicle(vehicle_pose.rotation().inverse());
+	std::vector<Eigen::Vector2d> points_list;
 	for (auto p: path_vector_){
 //		find the points within image covered area, get the relativ position
-		if ((p - vehicle_pose2d).norm() < interface_.image_radius){
+		if ((p - vehicle_pose2d).norm() < interface_.image_scope * 1.41 / 2){
 			p = p - vehicle_pose2d;
 			Eigen::Vector3d pose3d(Eigen::Vector3d::Zero());
 			pose3d.head<2>() = p;
@@ -202,7 +206,8 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 
 	if (points_list.size() <= interface_.least_points) return false;
 
-	const int img_cells = std::round(2. * interface_.image_radius / interface_.point_distance);
+
+	const int img_cells = std::round(interface_.image_scope / interface_.point_distance);
 	cv::Mat img(img_cells, img_cells, CV_32FC1, cv::Scalar(0));
 
 	int center_col = img_cells / 2;
@@ -210,12 +215,14 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 //	fill the pixel
 	for (const auto& p: points_list){
 		int rel_col = std::round(p.y() / interface_.point_distance);
+		if (center_col - rel_col >= img_cells or center_col - rel_col < 0) continue;
 		int rel_row = std::round(p.x() / interface_.point_distance);
+		if (center_row - rel_row >= img_cells or center_row - rel_row < 0) continue;
 		float* imgrow = img.ptr<float>(center_row - rel_row);
 		imgrow[center_col - rel_col] = 1.;
 	}
-	cv::imshow("Local Path", img);
-	cv::waitKey(1);
+//	cv::imshow("Local Path", img);
+//	cv::waitKey(1);
 	cv_bridge::CvImagePtr cv_ptr{new cv_bridge::CvImage};
 	cv_ptr->header.stamp = timer_event.current_expected;
 //	cv_ptr->header.frame_id = interface_.frame_id_vehicle;

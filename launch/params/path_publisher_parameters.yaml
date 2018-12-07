@@ -25,5 +25,6 @@ drive_distance: 2     #recommand to be half of path_length
 point_distance: 0.02
 timer_rate: 20
 verbosity: debug
-image_radius: 2       #it can not be larger than half of path_length
+image_scope: 4       #image scope in real world (m)
 least_points: 50
+kox_shift: -0.2

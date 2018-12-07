@@ -50,7 +50,7 @@ gen.add("drive_distance", paramtype='double', description="drive distance before
 gen.add("point_distance", paramtype='double', description="distance between two points", default=0.02, min=0.005, max=0.5, configurable=True, global_scope=False)
 gen.add("radius_noise", paramtype='double', description="standard deviation of noise to radius when generate sample map", default=0.2, min=0, max=0.5, configurable=True, global_scope=False)
 gen.add("rotation_noise", paramtype='double', description="standard deviation of noise to rotation when process sample map", default=10, min=0, max=20, configurable=True, global_scope=False)
-gen.add("image_radius", paramtype='double', description="real world radius of path image covered area", default=2, min=0, max=10, configurable=True, global_scope=False)
+gen.add("image_scope", paramtype='double', description="real world width and height of path image covered area", default=2, min=0, max=10, configurable=True, global_scope=False)
 gen.add("least_points", paramtype='int', description="least points in image area", default=10, min=0, max=50, configurable=True, global_scope=False)
 
 # Publisher and subscriber (group name will show up in dynamic_reconfigure window)
