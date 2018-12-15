@@ -13,18 +13,23 @@
 # map: {"a": "b", "c": "d"}
 
 map_name: fitted_road_map.osm
-mode: test
-frame_id_map: world
-frame_id_vehicle: vehicle_front_axle
 center_x: 3.0
 center_y: 5.0
-radius_noise: 0.2
+radius_noise: 0.3
 rotation_noise: 20
+shift_noise: 0.2
 path_length: 6          #whole path has to be larger than this length
 drive_distance: 2     #recommand to be half of path_length
-point_distance: 0.02
 timer_rate: 20
 verbosity: debug
-image_scope: 4       #image scope in real world (m)
-least_points: 50
+point_distance: 0.02    #same to path generator
+
+
+# following are env sensitive parameters
+mode: train
+env: carla
+frame_id_map: map
+frame_id_vehicle: base_link
+least_points: 300
+local_scope: 20       #local scope in real world (m) 
 kox_shift: -0.2

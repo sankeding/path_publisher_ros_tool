@@ -148,39 +148,46 @@ double signedAngleBetween(const Eigen::Vector3d& a, const Eigen::Vector3d& b) {
 void PathPublisher::samplePath(){
 //delete all the exist data
 	for (auto& onePath: samplePath_) onePath.clear();
-//all sample path has length of 3*pi/2 (m), generate in vehicle coordination, assume that vehicle point to x positive
+//all sample path has base length of 3*pi/2 (m), generate in vehicle coordination, assume that vehicle point to x positive
 	double delta = interface_.delta_sigma;
 	static std::normal_distribution<double> n(0, interface_.radius_noise);
+	static std::normal_distribution<double> la(0, interface_.shift_noise);
 	static std::default_random_engine e;
-	double noise = n(e), r = 0.;
+	double noise = n(e), r = 0., la_shift = la(e);
+	la_shift = boost::algorithm::clamp(la_shift, -2. * interface_.shift_noise, 2.*interface_.shift_noise);
 	noise = boost::algorithm::clamp(noise, -0.4, 0.4);
-	ROS_DEBUG_STREAM("noise of radius: " << noise);
+//	ROS_DEBUG_STREAM("noise of radius: " << noise);
+	double multiplier = 1.;
+	if (interface_.env == "carla") multiplier = 7.;
+	if (interface_.env != "carla" and interface_.env != "anicar")
+		ROS_WARN_STREAM("parameter:env not well defined! Using anicar instead");
+	la_shift *= multiplier;
 //generate first kind of sample path, radius 1.5 (m)
-	r = 1.5 + noise;
+	r = (1.5 + noise) * multiplier;
 	for(double angle = 3.*M_PI/4.; angle > -M_PI/4.; angle -= delta){
-		samplePath_[0].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r, 0.0));
+		samplePath_[0].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r + la_shift, 0.0));
 	}
 //	generate second kind of sample path, radius 3 (m)
-	r = 3. + noise;
+	r = (3. + noise) * multiplier;
 	for(double angle = 5.*M_PI/8.; angle > M_PI/8.; angle -= delta){
-		samplePath_[1].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r, 0.0));
+		samplePath_[1].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r + la_shift, 0.0));
 	}
 //	generate third kind of sample path, radius infinit (m)
-	for(double d = -3.*M_PI/8.; d < 9.*M_PI/8.; d += 0.02){
-		samplePath_[2].push_back(Eigen::Vector3d(d, 0., 0.));
+	for(double d = multiplier * -3.*M_PI/8.; d < multiplier * 9.*M_PI/8.; d += 0.02){
+		samplePath_[2].push_back(Eigen::Vector3d(d, la_shift, 0.));
 	}
 //	generate fourth kind of sample path, radius 3 (m)
-	r = 3. + noise;
+	r = (3. + noise) * multiplier;
 	for(double angle = 11.*M_PI/8.; angle < 15.*M_PI/8.; angle += delta){
-		samplePath_[3].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r + r, 0.0));
+		samplePath_[3].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r + r + la_shift, 0.0));
 	}
 
 //	generate fifth kind of sample path, radius 1.5 (m)
-	r = 1.5 + noise;
+	r = (1.5 + noise) * multiplier;
 	for(double angle = 5.*M_PI/4.; angle < 9.*M_PI/4.; angle += delta){
-		samplePath_[4].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r + r, 0.0));
+		samplePath_[4].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r + r + la_shift, 0.0));
 	}
-	ROS_DEBUG_STREAM("first path of sample path has length: " << samplePath_[0].size());
+//	ROS_DEBUG_STREAM("first path of sample path has length: " << samplePath_[0].size());
 }
 
 bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::TimerEvent& timer_event){
@@ -193,7 +200,7 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 	std::vector<Eigen::Vector2d> points_list;
 	for (auto p: path_vector_){
 //		find the points within image covered area, get the relativ position
-		if ((p - vehicle_pose2d).norm() < interface_.image_scope * 1.41 / 2){
+		if ((p - vehicle_pose2d).norm() < interface_.local_scope * 1.41 / 2){
 			p = p - vehicle_pose2d;
 			Eigen::Vector3d pose3d(Eigen::Vector3d::Zero());
 			pose3d.head<2>() = p;
@@ -206,30 +213,32 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 
 	if (points_list.size() <= interface_.least_points) return false;
 
+//	publish the local image only when using anicar
+	if (interface_.env == "anicar"){
+		const int img_cells = std::round(interface_.local_scope / interface_.point_distance);
+		cv::Mat img(img_cells, img_cells, CV_32FC1, cv::Scalar(0));
 
-	const int img_cells = std::round(interface_.image_scope / interface_.point_distance);
-	cv::Mat img(img_cells, img_cells, CV_32FC1, cv::Scalar(0));
-
-	int center_col = img_cells / 2;
-	int center_row = img_cells / 2;
-//	fill the pixel
-	for (const auto& p: points_list){
-		int rel_col = std::round(p.y() / interface_.point_distance);
-		if (center_col - rel_col >= img_cells or center_col - rel_col < 0) continue;
-		int rel_row = std::round(p.x() / interface_.point_distance);
-		if (center_row - rel_row >= img_cells or center_row - rel_row < 0) continue;
-		float* imgrow = img.ptr<float>(center_row - rel_row);
-		imgrow[center_col - rel_col] = 1.;
+		int center_col = img_cells / 2;
+		int center_row = img_cells / 2;
+	//	fill the pixel
+		for (const auto& p: points_list){
+			int rel_col = std::round(p.y() / interface_.point_distance);
+			if (center_col - rel_col >= img_cells or center_col - rel_col < 0) continue;
+			int rel_row = std::round(p.x() / interface_.point_distance);
+			if (center_row - rel_row >= img_cells or center_row - rel_row < 0) continue;
+			float* imgrow = img.ptr<float>(center_row - rel_row);
+			imgrow[center_col - rel_col] = 1.;
+		}
+	//	cv::imshow("Local Path", img);
+	//	cv::waitKey(1);
+		cv_bridge::CvImagePtr cv_ptr{new cv_bridge::CvImage};
+		cv_ptr->header.stamp = timer_event.current_expected;
+	//	cv_ptr->header.frame_id = interface_.frame_id_vehicle;
+		cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
+		cv_ptr->image = img;
+		cv_ptr->toImageMsg();
+		interface_.image_publisher.publish(cv_ptr);
 	}
-//	cv::imshow("Local Path", img);
-//	cv::waitKey(1);
-	cv_bridge::CvImagePtr cv_ptr{new cv_bridge::CvImage};
-	cv_ptr->header.stamp = timer_event.current_expected;
-//	cv_ptr->header.frame_id = interface_.frame_id_vehicle;
-	cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
-	cv_ptr->image = img;
-	cv_ptr->toImageMsg();
-	interface_.image_publisher.publish(cv_ptr);
 	return true;
 }
 
@@ -273,6 +282,8 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	interface_.reward_publisher.publish(reward_msg);
 //	generate the image of local path
 	bool path_in_scope = PathPublisher::imageGenerator(vehicle_pose, timer_event);
+//	TODO: call service in python node to reset the episode
+
 
 
 	if (interface_.mode == "test"){
@@ -340,17 +351,23 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 		static std::default_random_engine e;
 		double noise = n(e);
 		noise = boost::algorithm::clamp(noise, -M_PI*2./18., M_PI*2./18.);
-		ROS_DEBUG_STREAM("noise of angle: " << noise);
+//		ROS_DEBUG_STREAM("noise of angle: " << noise);
 		Eigen::Affine3d NoiseTransform(Eigen::AngleAxisd(noise, Eigen::Vector3d::UnitZ()));
 		Eigen::Matrix4d NewTransform = (vehicle_pose*NoiseTransform).matrix();
+		std::vector<std::vector<Eigen::Vector3d>>::iterator path_vector;
 //find the sample path whose end position is the closet to center of map
-		auto const& path_vector = boost::range::min_element(
-				samplePath_, [&](const std::vector<Eigen::Vector3d>& lp,
-								const std::vector<Eigen::Vector3d>& rp){
-			Eigen::Vector3d lpP(lp.back()), rpP(rp.back());
-			return ((NewTransform * Eigen::Vector4d(lpP[0], lpP[1], lpP[2], 1)).head<3>() - center_).squaredNorm()<
-					((NewTransform * Eigen::Vector4d(rpP[0], rpP[1], rpP[2], 1)).head<3>() - center_).squaredNorm();
-		});
+		if (interface_.env == "carla"){
+			static std::uniform_int_distribution<int> which_path(0, samplePath_.size() - 1);
+			path_vector = samplePath_.begin() + which_path(e);
+		}else{
+			path_vector = boost::range::min_element(
+					samplePath_, [&](const std::vector<Eigen::Vector3d>& lp,
+									const std::vector<Eigen::Vector3d>& rp){
+				Eigen::Vector3d lpP(lp.back()), rpP(rp.back());
+				return ((NewTransform * Eigen::Vector4d(lpP[0], lpP[1], lpP[2], 1)).head<3>() - center_).squaredNorm()<
+						((NewTransform * Eigen::Vector4d(rpP[0], rpP[1], rpP[2], 1)).head<3>() - center_).squaredNorm();
+			});
+		}
 //		nav_msgs::Path::Ptr path;
 		for(const auto& p: *path_vector){
 			Eigen::Vector4d p_to_transform(p[0], p[1], p[2], 1);
