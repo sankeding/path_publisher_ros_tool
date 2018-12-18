@@ -12,6 +12,8 @@
 # vector: [1.0, 2.0, 3.4]
 # map: {"a": "b", "c": "d"}
 
+verbosity: info
+episode_service: /rl_anicar_interface/reset_episode
 map_name: fitted_road_map.osm
 center_x: 3.0
 center_y: 5.0
@@ -21,8 +23,12 @@ shift_noise: 0.2
 path_length: 6          #whole path has to be larger than this length
 drive_distance: 2     #recommand to be half of path_length
 timer_rate: 20
-verbosity: debug
 point_distance: 0.02    #same to path generator
+stuck_time: 10
+BB_left_bottom_x: 0.
+BB_left_bottom_y: 0.
+BB_top_right_x: 10.
+BB_top_right_y: 10.
 
 
 # following are env sensitive parameters
@@ -30,6 +36,6 @@ mode: train
 env: carla
 frame_id_map: map
 frame_id_vehicle: base_link
-least_points: 300
+least_points: 100
 local_scope: 20       #local scope in real world (m) 
 kox_shift: -0.2

@@ -42,6 +42,9 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 	pose_ros.pose.orientation.w = 0.0;
 	pose_ros.pose.position.z = 0.0;
 	pose_ros.header = path_->header;
+
+	reset_episode_client_ = nhPrivate.serviceClient<ResetEpisode>(interface_.episode_service);
+
     if (interface_.mode != "train" && interface_.mode != "test")
     {
 		ROS_ERROR_STREAM("please check you spell of mode.");
@@ -282,9 +285,13 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	interface_.reward_publisher.publish(reward_msg);
 //	generate the image of local path
 	bool path_in_scope = PathPublisher::imageGenerator(vehicle_pose, timer_event);
-//	TODO: call service in python node to reset the episode
 
+//	if vehicle dosen't move, generate a new path
+	bool vehicle_stuck = false;
+	if (not sample_flag_) timerecoder_=timer_event.current_expected.toSec();
+	else if (timer_event.current_expected.toSec() - timerecoder_ > interface_.stuck_time) vehicle_stuck = true;
 
+	//	TODO: check vehicle get out of boundary or not
 
 	if (interface_.mode == "test"){
 //    decide to pubnish a new path or not
@@ -324,7 +331,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 		interface_.path_publisher.publish(part_of_path_);
 	}else if (interface_.mode == "train"){
 //		flag to ensure sample path at least to be initialized once, and path in the image scope
-		if (sample_flag_ and path_in_scope){
+		if (sample_flag_ and path_in_scope and not vehicle_stuck){
 	//		if still not drive enough far abandon to pubnish new path
 			int index_distance = std::distance(path_vector_.begin(), it);
 			ROS_DEBUG_STREAM("local path length: " << path_vector_.size() << std::endl <<
@@ -378,7 +385,10 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			path_vector_.emplace_back(Eigen::Vector2d(p_to_transform[0], p_to_transform[1]));
 		}
 //		ROS_DEBUG_STREAM("publish a path of " << path_->poses.size() << " long.");
+
+//		TODO: call reset episode service
 		interface_.path_publisher.publish(path_);
+		timerecoder_=timer_event.current_expected.toSec();
 	}
 }
 

@@ -11,13 +11,14 @@
 #include <random>
 
 #include "path_publisher_ros_tool/PathPublisherInterface.h"
+#include "rl_anicar_interface_ros_tool/reset_episode.h"
 
 namespace path_publisher_ros_tool {
 
 class PathPublisher {
 
     using Interface = PathPublisherInterface;
-
+    using ResetEpisode = rl_anicar_interface_ros_tool::reset_episode;
     using Msg = std_msgs::Header;
 
 public:
@@ -38,6 +39,8 @@ private:
     Interface interface_;
     dynamic_reconfigure::Server<Interface::Config> reconfigureServer_;
 
+    ros::ServiceClient reset_episode_client_;
+
     tf2_ros::Buffer tfBuffer_;
     tf2_ros::TransformListener tfListener_{tfBuffer_};
     tf2_ros::TransformBroadcaster tfBroadcaster_;
@@ -48,6 +51,7 @@ private:
     std::vector<std::vector<Eigen::Vector3d>> samplePath_{5};
     RoadMap map_{0., 0.};
     Eigen::Vector3d center_;
+    double timerecoder_;
     std::vector<Eigen::Vector2d> path_vector_;
     std::vector<Eigen::Vector2d> path_vector_whole_;
     std::vector<Eigen::Vector2d>::iterator prev_pos_index_;
