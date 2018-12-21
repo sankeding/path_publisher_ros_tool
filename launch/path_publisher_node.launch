@@ -1,10 +1,13 @@
 <launch>
+  <arg name="path_image_topic"/>
+  <arg name="reward_topic"/>
 
-  <arg name="config" default="$(find path_publisher_ros_tool)/launch/params/path_publisher_parameters.yaml" />  
-
+  <arg name="config" default="$(find path_publisher_ros_tool)/launch/params/path_publisher_parameters.yaml" />
   <node pkg="path_publisher_ros_tool" type="path_publisher" name="path_publisher" output="screen">
     <rosparam command="load" file="$(arg config)"/>
-    <param name="path_to_map" value="$(find path_generator_ros_tool)/res/" />
+    <param name="path_to_map" value="$(find path_publisher_ros_tool)/res/" />
+    <param name="image_publisher_topic" value="$(arg path_image_topic)" />
+    <param name="reward_publisher_topic" value="$(arg reward_topic)" />
   </node>
 
 </launch>

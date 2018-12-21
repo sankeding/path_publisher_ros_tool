@@ -212,13 +212,15 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 		}
 	}
 
-	ROS_DEBUG_STREAM(points_list.size() << " points in local scope found");
+	ROS_ERROR_STREAM(points_list.size() << " points in local scope found");
 
 	if (points_list.size() <= interface_.least_points) return false;
 
 //	publish the local image only when using anicar
-	if (interface_.env == "anicar"){
-		const int img_cells = std::round(interface_.local_scope / interface_.point_distance);
+	if (interface_.env == "anicar" || interface_.env == "carla"){
+        ROS_ERROR_STREAM("publishing image");
+
+        const int img_cells = std::round(interface_.local_scope / interface_.point_distance);
 		cv::Mat img(img_cells, img_cells, CV_32FC1, cv::Scalar(0));
 
 		int center_col = img_cells / 2;
@@ -226,11 +228,11 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 	//	fill the pixel
 		for (const auto& p: points_list){
 			int rel_col = std::round(p.y() / interface_.point_distance);
-			if (center_col - rel_col >= img_cells or center_col - rel_col < 0) continue;
+			if (center_col + rel_col >= img_cells or center_col + rel_col < 0) continue;
 			int rel_row = std::round(p.x() / interface_.point_distance);
-			if (center_row - rel_row >= img_cells or center_row - rel_row < 0) continue;
-			float* imgrow = img.ptr<float>(center_row - rel_row);
-			imgrow[center_col - rel_col] = 1.;
+			if (center_row + rel_row >= img_cells or center_row + rel_row < 0) continue;
+			float* imgrow = img.ptr<float>(center_row + rel_row);
+			imgrow[center_col + rel_col] = 255.;
 		}
 	//	cv::imshow("Local Path", img);
 	//	cv::waitKey(1);
