@@ -1,4 +1,5 @@
 <launch>
+  <arg name="path_topic"/>
   <arg name="path_image_topic"/>
   <arg name="reward_topic"/>
 
@@ -7,6 +8,7 @@
     <rosparam command="load" file="$(arg config)"/>
     <param name="path_to_map" value="$(find path_publisher_ros_tool)/res/" />
     <param name="image_publisher_topic" value="$(arg path_image_topic)" />
+    <param name="path_publisher_topic" value="$(arg path_topic)" />
     <param name="reward_publisher_topic" value="$(arg reward_topic)" />
   </node>
 
