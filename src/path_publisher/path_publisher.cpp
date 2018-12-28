@@ -4,15 +4,13 @@
 #include <boost/algorithm/clamp.hpp>
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/range/algorithm/min_element.hpp>
-#include "path_publisher_ros_tool/dis_angle.h"
+#include "path_publisher_ros_tool/rl_state_reward.h"
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Image.h>
 
 namespace path_publisher_ros_tool {
-
-using Reward = path_publisher_ros_tool::dis_angle;
 
 PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate)
         : interface_{nhPrivate}, reconfigureServer_{nhPrivate} {
@@ -269,7 +267,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
 		return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
 	});
-	Reward reward_msg;
+    path_publisher_ros_tool::rl_state_reward reward_msg;
 	const double dis = (shifted_vehicle_position - *it).norm();
 	Eigen::Vector3d target_direction;
 	target_direction.head<2>() = *(it + 3) - *(it - 3);
@@ -284,7 +282,10 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	        boost::math::sign(target_direction.cross(closet_3d - shifted_v_p_3d).z());
 	reward_msg.angle = signedAngleBetween(vehicle_frame_unit_x, target_direction);
 	reward_msg.dis = vz_dist * dis;
-	interface_.reward_publisher.publish(reward_msg);
+    reward_msg.done = true;//that means stop the episode and start a new one
+
+
+    interface_.reward_publisher.publish(reward_msg);
 //	generate the image of local path
 	bool path_in_scope = PathPublisher::imageGenerator(vehicle_pose, timer_event);
 

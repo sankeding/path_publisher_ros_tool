@@ -65,7 +65,7 @@ gen.add("BB_top_right_y", paramtype='double', description="position of top right
 pub_sub = gen.add_group("Publisher and subscriber")
 pub_sub.add_publisher("image_publisher", message_type="sensor_msgs::Image", description="image publisher", default_topic="/path_img", configurable=True)
 pub_sub.add_publisher("path_publisher", message_type="nav_msgs::Path", description="path publisher", default_topic="/path", configurable=True)
-pub_sub.add_publisher("reward_publisher", message_type="path_publisher_ros_tool::dis_angle", description="reward publisher", default_topic="/reward", configurable=True)
+pub_sub.add_publisher("reward_publisher", message_type="path_publisher_ros_tool::rl_state_reward", description="rl state, reward publisher", default_topic="/rl_state_reward", configurable=True)
 
 
 # DO NOT TOUCH THIS LINE
