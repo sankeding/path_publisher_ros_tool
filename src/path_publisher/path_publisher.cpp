@@ -4,7 +4,7 @@
 #include <boost/algorithm/clamp.hpp>
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/range/algorithm/min_element.hpp>
-#include "path_publisher_ros_tool/rl_state_reward.h"
+#include "path_publisher_ros_tool/rl_measurement.h"
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include <sensor_msgs/image_encodings.h>
@@ -240,6 +240,7 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 		cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
 		cv_ptr->image = img;
 		cv_ptr->toImageMsg();
+
 		interface_.image_publisher.publish(cv_ptr);
 	}
 	return true;
@@ -267,7 +268,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
 		return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
 	});
-    path_publisher_ros_tool::rl_state_reward reward_msg;
+    path_publisher_ros_tool::rl_measurement rl_measurement_msg;
 	const double dis = (shifted_vehicle_position - *it).norm();
 	Eigen::Vector3d target_direction;
 	target_direction.head<2>() = *(it + 3) - *(it - 3);
@@ -280,12 +281,13 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	closet_3d.z() = 0.;
 	 const double vz_dist =
 	        boost::math::sign(target_direction.cross(closet_3d - shifted_v_p_3d).z());
-	reward_msg.angle = signedAngleBetween(vehicle_frame_unit_x, target_direction);
-	reward_msg.dis = vz_dist * dis;
-    reward_msg.done = true;//that means stop the episode and start a new one
 
+    rl_measurement_msg.angle = signedAngleBetween(vehicle_frame_unit_x, target_direction);
+    rl_measurement_msg.dis = vz_dist * dis;
+    rl_measurement_msg.done = true;//that means stop the episode and start a new one, put it in appropriate place!
+    //rl_measurement_msg.image = ....//here get the image from image generator...
 
-    interface_.reward_publisher.publish(reward_msg);
+    interface_.rl_measurement_publisher.publish(rl_measurement_msg);
 //	generate the image of local path
 	bool path_in_scope = PathPublisher::imageGenerator(vehicle_pose, timer_event);
 

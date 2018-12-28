@@ -43,6 +43,7 @@ if (ROS_GENERATE_MESSAGES)
         DEPENDENCIES
         #add dependencies here
         std_msgs
+        sensor_msgs
         )
 endif()
 
