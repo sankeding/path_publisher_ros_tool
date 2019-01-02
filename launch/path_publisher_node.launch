@@ -1,7 +1,7 @@
 <launch>
   <arg name="path_topic"/>
   <arg name="path_image_topic"/>
-  <arg name="reward_topic"/>
+  <arg name="rl_measurement_topic"/>
 
   <arg name="config" default="$(find path_publisher_ros_tool)/launch/params/path_publisher_parameters.yaml" />
   <node pkg="path_publisher_ros_tool" type="path_publisher" name="path_publisher" output="screen">
@@ -9,7 +9,7 @@
     <param name="path_to_map" value="$(find path_publisher_ros_tool)/res/" />
     <param name="image_publisher_topic" value="$(arg path_image_topic)" />
     <param name="path_publisher_topic" value="$(arg path_topic)" />
-    <param name="reward_publisher_topic" value="$(arg reward_topic)" />
+    <param name="rl_measurement_topic" value="$(arg rl_measurement_topic)" />
   </node>
 
 </launch>
