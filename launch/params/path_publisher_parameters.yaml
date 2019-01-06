@@ -12,8 +12,8 @@
 # vector: [1.0, 2.0, 3.4]
 # map: {"a": "b", "c": "d"}
 
-verbosity: info
-episode_service: /rl_anicar_interface/reset_episode
+verbosity: debug
+episode_service: /reset_episode
 map_name: fitted_road_map.osm
 center_x: 3.0
 center_y: 5.0
@@ -38,4 +38,4 @@ frame_id_map: map
 frame_id_vehicle: base_link
 least_points: 100
 local_scope: 20       #local scope in real world (m) 
-kox_shift: 0.		# this value is equal to distance between vehicle center and frame_id_vehicle
+kox_shift: 0.0        # this value is equal to distance between vehicle center and frame_id_vehicle

@@ -93,42 +93,6 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 						path_vector_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
 					return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
 				});
-		}else if (interface_.mode == "train"){
-//	//		generate a new path and publish
-//			samplePath();
-//	//initial pose message
-//			geometry_msgs::PoseStamped pose_ros;
-//			pose_ros.pose.orientation.x = 0.0;
-//			pose_ros.pose.orientation.y = 0.0;
-//			pose_ros.pose.orientation.z = 0.0;
-//			pose_ros.pose.orientation.w = 0.0;
-//			pose_ros.pose.position.z = 0.0;
-//			pose_ros.header = path_->header;
-//	//transform the path to map frame
-//			static std::normal_distribution<double> n(0, M_PI*interface_.rotation_noise/360.);
-//			static std::default_random_engine e;
-//			double noise = n(e);
-//			noise = boost::algorithm::clamp(noise, -M_PI*2./18., M_PI*2./18.);
-//			ROS_DEBUG_STREAM("noise of angle: " << noise);
-//			Eigen::Affine3d NoiseTransform(Eigen::AngleAxisd(noise, Eigen::Vector3d::UnitZ()));
-//			Eigen::Matrix4d NewTransform = (vehicle_pose*NoiseTransform).matrix();
-//	//find the sample path whose end position is the closet to center of map
-//			auto const& path_vector = boost::range::min_element(
-//					samplePath_, [&](const std::vector<Eigen::Vector3d>& lp,
-//									const std::vector<Eigen::Vector3d>& rp){
-//				Eigen::Vector3d lpP(lp.back()), rpP(rp.back());
-//				return ((NewTransform * Eigen::Vector4d(lpP[0], lpP[1], lpP[2], 1)).head<3>() - center_).squaredNorm()<
-//						((NewTransform * Eigen::Vector4d(rpP[0], rpP[1], rpP[2], 1)).head<3>() - center_).squaredNorm();
-//			});
-//	//		nav_msgs::Path::Ptr path;
-//			for(const auto& p: *path_vector){
-//				Eigen::Vector4d p_to_transform(p[0], p[1], p[2], 1);
-//				p_to_transform = NewTransform * p_to_transform;
-//				pose_ros.pose.position.x = p_to_transform[0];
-//				pose_ros.pose.position.y = p_to_transform[1];
-//				path_->poses.emplace_back(pose_ros);
-//				path_vector_.emplace_back(Eigen::Vector2d(p_to_transform[0], p_to_transform[1]));
-//			}
 		}
 	}
 
@@ -206,7 +170,7 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 		}
 	}
 
-	ROS_ERROR_STREAM(points_list.size() << " points in local scope found");
+	ROS_DEBUG_STREAM(points_list.size() << " points in local scope found");
 
 	if (points_list.size() <= interface_.least_points) return false;
 
@@ -235,6 +199,8 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 }
 
 void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
+//  return if calling a service right now
+	if (in_reset_) return;
 //	index distance will indicate how far the vehicle has driven.
 	int index_distance{0};
 //	supervise if local image includes any path
@@ -341,7 +307,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	}else if (interface_.mode == "train"){
 //		ensure path will be initialized at least once
 		if (not sample_flag_){
-			pubnewpath(timer_event, vehicle_pose);
+			pubnewpath(timer_event);
 			sample_flag_ = true;
 		}else{
 			if (path_in_scope and not vehicle_stuck){
@@ -353,14 +319,26 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	//	call reset episode service
 			ResetEpisode resetepisode;
 			resetepisode.request.reset = true;
+			in_reset_ = true;
 			reset_episode_client_.call(resetepisode);
-			pubnewpath(timer_event, vehicle_pose);
+			in_reset_ = false;
+			pubnewpath(timer_event);
 			switcher += -1;
 		}
 	}
 }
 
-void PathPublisher::pubnewpath(const ros::TimerEvent& timer_event, const Eigen::Affine3d& vehicle_pose){
+void PathPublisher::pubnewpath(const ros::TimerEvent& timer_event){
+//	get the vehicle position
+		Eigen::Affine3d vehicle_pose;
+		try {
+			const geometry_msgs::TransformStamped tf_ros =
+				tfBuffer_.lookupTransform(interface_.frame_id_map, interface_.frame_id_vehicle, ros::Time(0));
+			vehicle_pose = tf2::transformToEigen(tf_ros);
+		} catch (const tf2::TransformException& e){
+			ROS_WARN_STREAM(e.what());
+			return;
+		}
 //		generate a new path and publish
 		samplePath();
 		path_.reset(new nav_msgs::Path);

@@ -39,7 +39,7 @@ private:
 				std::vector<Eigen::Vector2d>& dest,
 				nav_msgs::Path::Ptr& path_ptr);
     void setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::vector<Eigen::Vector2d>& source, std::vector<Eigen::Vector2d>::iterator& start, std::vector<Eigen::Vector2d>::iterator& it_end);
-    void pubnewpath(const ros::TimerEvent&, const Eigen::Affine3d&);
+    void pubnewpath(const ros::TimerEvent&);
 
     Interface interface_;
     dynamic_reconfigure::Server<Interface::Config> reconfigureServer_;
@@ -63,6 +63,7 @@ private:
     std::vector<Eigen::Vector2d>::iterator prev_pos_index_;
     std::vector<Eigen::Vector2d>::iterator prev_pos_whole_index_;
     bool sample_flag_ = false;
+    bool in_reset_{false};
 
 };
 } // namespace path_publisher_ros_tool
