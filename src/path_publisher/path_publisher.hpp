@@ -9,6 +9,10 @@
 #include <Eigen/Dense>
 #include "road_map/RoadMap.hpp"
 #include <random>
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/opencv.hpp>
+#include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/Image.h>
 
 #include "path_publisher_ros_tool/PathPublisherInterface.h"
 #include "rl_anicar_interface_ros_tool/reset_episode.h"
@@ -28,13 +32,14 @@ private:
     void callbackTimer(const ros::TimerEvent&);
     void reconfigureRequest(const Interface::Config&, uint32_t);
     void samplePath();
-    bool imageGenerator(Eigen::Affine3d&, const ros::TimerEvent&);
+    bool imageGenerator(Eigen::Affine3d&, const ros::TimerEvent&, cv_bridge::CvImagePtr);
     void clipPath(std::vector<Eigen::Vector2d>::iterator& source_start,
     			std::vector<Eigen::Vector2d>::iterator& source_end,
 				std::vector<Eigen::Vector2d>& source,
 				std::vector<Eigen::Vector2d>& dest,
 				nav_msgs::Path::Ptr& path_ptr);
     void setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::vector<Eigen::Vector2d>& source, std::vector<Eigen::Vector2d>::iterator& start, std::vector<Eigen::Vector2d>::iterator& it_end);
+    void pubnewpath(const ros::TimerEvent&, const Eigen::Affine3d&);
 
     Interface interface_;
     dynamic_reconfigure::Server<Interface::Config> reconfigureServer_;
@@ -51,6 +56,7 @@ private:
     std::vector<std::vector<Eigen::Vector3d>> samplePath_{5};
     RoadMap map_{0., 0.};
     Eigen::Vector3d center_;
+    int switcher{1};
     double timerecoder_;
     std::vector<Eigen::Vector2d> path_vector_;
     std::vector<Eigen::Vector2d> path_vector_whole_;
