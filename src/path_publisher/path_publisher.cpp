@@ -323,7 +323,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			reset_episode_client_.call(resetepisode);
 			in_reset_ = false;
 			pubnewpath(timer_event);
-			switcher += -1;
+			switcher *= -1;
 		}
 	}
 }
