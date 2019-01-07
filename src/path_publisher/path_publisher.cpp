@@ -160,7 +160,7 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 	Eigen::Matrix3d map_to_vehicle(vehicle_pose.rotation().inverse());
 	std::vector<Eigen::Vector2d> points_list;
 	for (auto p: path_vector_){
-//		find the points within image covered area, get the relativ position
+//		find the points within image covered area, get the relative position
 		if ((p - vehicle_pose2d).norm() < interface_.local_scope * 1.41 / 2){
 			p = p - vehicle_pose2d;
 			Eigen::Vector3d pose3d(Eigen::Vector3d::Zero());
@@ -186,11 +186,11 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 		if (center_col + rel_col >= img_cells or center_col + rel_col < 0) continue;
 		int rel_row = std::round(p.x() / interface_.point_distance);
 		if (center_row + rel_row >= img_cells or center_row + rel_row < 0) continue;
-		float* imgrow = img.ptr<float>(center_row + rel_row);
-		imgrow[center_col + rel_col] = 255.;
+		float* imgrow = img.ptr<float>(center_row - rel_row);
+		imgrow[center_col - rel_col] = 255.;
 	}
-//	cv::imshow("Local Path", img);
-//	cv::waitKey(1);
+	cv::imshow("Local Path", img);
+	cv::waitKey(1);
 	cv_ptr->header.stamp = timer_event.current_expected;
 //	cv_ptr->header.frame_id = interface_.frame_id_vehicle;
 	cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
