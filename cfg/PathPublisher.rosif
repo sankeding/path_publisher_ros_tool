@@ -42,7 +42,7 @@ gen.add("path_to_map", paramtype='std::string', description="directory to map fi
 gen.add("mode", paramtype='std::string', description="mode of path publisher, train or test")
 gen.add("env", paramtype='std::string', description="run on anicar or simulator")
 gen.add("map_name", paramtype='std::string', description="file name of map", default="")
-gen.add("episode_service", paramtype='std::string', description="file name of map")
+gen.add("reset_episode_service_name", paramtype='std::string', description="name of service", default="/reset_episode")
 gen.add("frame_id_map", paramtype='std::string', description="Map frame ID", default="map")
 gen.add("frame_id_vehicle", paramtype='std::string', description="Vehicle frame ID", default="vehicle")
 gen.add("center_x", paramtype='double', description="x axis value of center point of map", default=0.0, min=0, max=15, configurable=True, global_scope=False)

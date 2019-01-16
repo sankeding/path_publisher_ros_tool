@@ -16,7 +16,6 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
      */
     interface_.fromParamServer();
 
-
     /**
      * Set up callbacks for subscribers and reconfigure.
      *
@@ -37,7 +36,7 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 	pose_ros.pose.position.z = 0.0;
 	pose_ros.header = path_->header;
 
-	reset_episode_client_ = nhPrivate.serviceClient<ResetEpisode>(interface_.episode_service);
+	reset_episode_client_ = nhPrivate.serviceClient<ResetEpisode>(interface_.reset_episode_service_name);
 
     if (interface_.mode != "train" && interface_.mode != "test")
     {
@@ -148,6 +147,7 @@ void PathPublisher::samplePath(){
 	for(double angle = 5.*M_PI/4.; angle < 9.*M_PI/4.; angle += delta){
 		samplePath_[4].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r + r + la_shift, 0.0));
 	}
+
 //	ROS_DEBUG_STREAM("first path of sample path has length: " << samplePath_[0].size());
 }
 
@@ -183,9 +183,9 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 //	fill the pixel
 	for (const auto& p: points_list){
 		int rel_col = std::round(p.y() / interface_.point_distance);
-		if (center_col + rel_col >= img_cells or center_col + rel_col < 0) continue;
+		if (center_col - rel_col >= img_cells or center_col - rel_col < 0) continue;
 		int rel_row = std::round(p.x() / interface_.point_distance);
-		if (center_row + rel_row >= img_cells or center_row + rel_row < 0) continue;
+		if (center_row - rel_row >= img_cells or center_row - rel_row < 0) continue;
 		float* imgrow = img.ptr<float>(center_row - rel_row);
 		imgrow[center_col - rel_col] = 255.;
 	}
@@ -267,6 +267,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 		rl_measurement_msg.path_image = *cv_ptr->toImageMsg();
 		rl_measurement_msg.switcher = switcher;
 		interface_.rl_measurement_publisher.publish(rl_measurement_msg);
+        cv_ptr->image.release();
 	}
 
 	if (interface_.mode == "test"){
@@ -316,14 +317,20 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 								"current distance: " << index_distance);
 				if ((index_distance / double(path_vector_.size())) < 0.7) return;
 			}
-	//	call reset episode service
-			ResetEpisode resetepisode;
-			resetepisode.request.reset = true;
-			in_reset_ = true;
-			reset_episode_client_.call(resetepisode);
-			in_reset_ = false;
-			pubnewpath(timer_event);
-			switcher *= -1;
+	//	call reset vehicle service
+            try {
+                ResetEpisode resetEpisode;
+                resetEpisode.request.reset = true;
+                in_reset_ = true;
+                reset_episode_client_.waitForExistence();
+                reset_episode_client_.call(resetEpisode);
+                in_reset_ = false;
+                pubnewpath(timer_event);
+                switcher *= -1;
+            }catch (const tf2::TransformException& e){
+                ROS_ERROR_STREAM(e.what());
+            }
+
 		}
 	}
 }
@@ -366,6 +373,7 @@ void PathPublisher::pubnewpath(const ros::TimerEvent& timer_event){
 		if (interface_.env == "carla"){
 			static std::uniform_int_distribution<int> which_path(0, samplePath_.size() - 1);
 			path_vector = samplePath_.begin() + which_path(e);
+            path_vector = samplePath_.begin() + 2;
 		}else{
 			path_vector = boost::range::min_element(
 					samplePath_, [&](const std::vector<Eigen::Vector3d>& lp,
