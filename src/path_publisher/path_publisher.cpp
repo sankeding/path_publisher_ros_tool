@@ -172,7 +172,16 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 
 	ROS_DEBUG_STREAM(points_list.size() << " points in local scope found");
 
-	if (points_list.size() <= interface_.least_points) return false;
+        if (points_list.size() <= interface_.least_points){
+            const int img_cells = std::round(interface_.local_scope / interface_.point_distance);
+            cv::Mat img(img_cells, img_cells, CV_32FC1, cv::Scalar(0));
+            cv::imshow("Local Path", img);
+            cv::waitKey(1);
+            cv_ptr->header.stamp = timer_event.current_expected;
+            //	cv_ptr->header.frame_id = interface_.frame_id_vehicle;
+            cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
+            cv_ptr->image = img;
+            return false;}
 
 //	create a image of local area birdview
 	const int img_cells = std::round(interface_.local_scope / interface_.point_distance);
