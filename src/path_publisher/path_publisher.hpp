@@ -39,7 +39,7 @@ private:
 				std::vector<Eigen::Vector2d>& dest,
 				nav_msgs::Path::Ptr& path_ptr);
     void setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::vector<Eigen::Vector2d>& source, std::vector<Eigen::Vector2d>::iterator& start, std::vector<Eigen::Vector2d>::iterator& it_end);
-    void pubnewpath(const ros::TimerEvent&);
+    void pubnewpath(const ros::Time&);
 
     Interface interface_;
     dynamic_reconfigure::Server<Interface::Config> reconfigureServer_;

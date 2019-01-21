@@ -133,7 +133,7 @@ void PathPublisher::samplePath(){
 		samplePath_[1].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r + la_shift, 0.0));
 	}
 //	generate third kind of sample path, radius infinit (m)
-	for(double d = multiplier * -3.*M_PI/8.; d < multiplier * 9.*M_PI/8.; d += 0.02){
+	for(double d = multiplier * -3.*M_PI/8.; d < multiplier * 40.*M_PI/8.; d += 0.02){
 		samplePath_[2].push_back(Eigen::Vector3d(d, la_shift, 0.));
 	}
 //	generate fourth kind of sample path, radius 3 (m)
@@ -200,7 +200,10 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 
 void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 //  return if calling a service right now
-	if (in_reset_) return;
+	if (in_reset_){
+        timerecoder_=timer_event.current_expected.toSec();
+	    return;
+	}
 //	index distance will indicate how far the vehicle has driven.
 	int index_distance{0};
 //	supervise if local image includes any path
@@ -308,7 +311,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	}else if (interface_.mode == "train"){
 //		ensure path will be initialized at least once
 		if (not sample_flag_){
-			pubnewpath(timer_event);
+			pubnewpath(timer_event.current_expected);
 			sample_flag_ = true;
 		}else{
 			if (path_in_scope and not vehicle_stuck){
@@ -319,13 +322,15 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			}
 	//	call reset vehicle service
             try {
+                ROS_DEBUG_STREAM("PP: Reset Episode service is calling");
                 ResetEpisode resetEpisode;
                 resetEpisode.request.reset = true;
                 in_reset_ = true;
                 reset_episode_client_.waitForExistence();
                 reset_episode_client_.call(resetEpisode);
+                ROS_DEBUG_STREAM("PP: Reset Episode service end");
                 in_reset_ = false;
-                pubnewpath(timer_event);
+                pubnewpath(ros::Time::now());
                 switcher *= -1;
             }catch (const tf2::TransformException& e){
                 ROS_ERROR_STREAM(e.what());
@@ -335,7 +340,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	}
 }
 
-void PathPublisher::pubnewpath(const ros::TimerEvent& timer_event){
+void PathPublisher::pubnewpath(const ros::Time& timeStamp){
 //	get the vehicle position
 		Eigen::Affine3d vehicle_pose;
 		try {
@@ -351,7 +356,7 @@ void PathPublisher::pubnewpath(const ros::TimerEvent& timer_event){
 		path_.reset(new nav_msgs::Path);
 		path_vector_.clear();
 		path_->header.frame_id = interface_.frame_id_map;
-		path_->header.stamp = timer_event.current_expected;
+		path_->header.stamp = timeStamp;
 //initial pose message
 		geometry_msgs::PoseStamped pose_ros;
 		pose_ros.pose.orientation.x = 0.0;
@@ -394,7 +399,7 @@ void PathPublisher::pubnewpath(const ros::TimerEvent& timer_event){
 		}
 //		ROS_DEBUG_STREAM("publish a path of " << path_->poses.size() << " long.");
 		interface_.path_publisher.publish(path_);
-		timerecoder_=timer_event.current_expected.toSec();
+		timerecoder_=timeStamp.toSec();
 }
 
 void PathPublisher::clipPath(std::vector<Eigen::Vector2d>::iterator& source_start,
