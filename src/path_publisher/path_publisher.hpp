@@ -32,6 +32,7 @@ private:
     void callbackTimer(const ros::TimerEvent&);
     void reconfigureRequest(const Interface::Config&, uint32_t);
     void samplePath();
+    void samplingPath();
     bool imageGenerator(Eigen::Affine3d&, const ros::TimerEvent&, cv_bridge::CvImagePtr);
     void clipPath(std::vector<Eigen::Vector2d>::iterator& source_start,
     			std::vector<Eigen::Vector2d>::iterator& source_end,

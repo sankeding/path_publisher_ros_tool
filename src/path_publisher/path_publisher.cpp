@@ -56,21 +56,35 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 				ROS_WARN_STREAM(e.what());
 			}
 		}
-		if (interface_.mode == "test"){
+		if (interface_.mode == "test" or interface_.sampling_osm){
 
 //  load path from .osm file
 		map_.loadFromFile(interface_.path_to_map + interface_.map_name);
 		double x, y;
-		for (int i = 0; i < (int)map_.trajectories.at(1).size(); i++){
+//		save the first point
+		map_.getVertexMeters(1, 0, x, y);
+		pose_ros.pose.position.x = x;
+		pose_ros.pose.position.y = y;
+		path_vector_whole_.emplace_back(Eigen::Vector2d(x, y));
+		path_->poses.emplace_back(pose_ros);
+
+		double accumulated_length = 0.;
+		for (int i = 1; i < (int)map_.trajectories.at(1).size(); i++){
 			map_.getVertexMeters(1, i, x, y);
 			pose_ros.pose.position.x = x;
 			pose_ros.pose.position.y = y;
-			path_vector_whole_.emplace_back(Eigen::Vector2d(x, y));
-			path_->poses.emplace_back(pose_ros);
+			accumulated_length += (path_vector_whole_.back() - Eigen::Vector2d(x, y)).norm();
+			if (accumulated_length > interface_.point_distance){
+				path_vector_whole_.emplace_back(Eigen::Vector2d(x, y));
+				path_->poses.emplace_back(pose_ros);
+				accumulated_length = 0.;
+			}
 		}
 		ROS_DEBUG_STREAM("load road finished." << std::endl <<
 				"the whole path length: " << path_->poses.size());
 
+//		skip following steps if sampling osm
+		if (interface_.sampling_osm) return;
 //		set prev_pos_index mark
 		const Eigen::Vector3d vehicle_position = vehicle_pose.translation();
 		Eigen::Vector3d vehicle_frame_unit_x = vehicle_pose.rotation() * Eigen::Vector3d::UnitX();
@@ -103,6 +117,22 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 double signedAngleBetween(const Eigen::Vector3d& a, const Eigen::Vector3d& b) {
 	const double vz = boost::math::sign(a.cross(b).z());
 	return vz * std::acos(a.normalized().dot(b.normalized()));
+}
+
+void PathPublisher::samplingPath(){
+	//delete all the exist data
+	for (auto& onePath: samplePath_) onePath.clear();
+	int points_to_sampling = std::round(interface_.path_length / interface_.point_distance);
+	int sampling_start_point = points_to_sampling + 1;
+	int sampling_end_point = path_vector_whole_.size() - 2 - points_to_sampling;
+	static std::default_random_engine e;
+	static std::uniform_int_distribution<int> n(sampling_start_point, sampling_end_point);
+	int start_point = n(e);
+	for(int i = start_point; i < start_point + points_to_sampling; i++){
+		double x = path_vector_whole_[i].x();
+		double y = path_vector_whole_[i].y();
+		samplePath_[1].push_back(Eigen::Vector3d{x, y, 0});
+	}
 }
 
 void PathPublisher::samplePath(){
@@ -385,9 +415,12 @@ void PathPublisher::pubnewpath(const ros::Time& timeStamp){
 		std::vector<std::vector<Eigen::Vector3d>>::iterator path_vector;
 //find the sample path whose end position is the closet to center of map
 		if (interface_.env == "carla"){
-			static std::uniform_int_distribution<int> which_path(0, samplePath_.size() - 1);
-			path_vector = samplePath_.begin() + which_path(e);
-            path_vector = samplePath_.begin() + 2;
+			if(interface_.sampling_osm) path_vector = samplePath_.begin();
+			else{
+				static std::uniform_int_distribution<int> which_path(0, samplePath_.size() - 1);
+				path_vector = samplePath_.begin() + which_path(e);
+				path_vector = samplePath_.begin() + 2;
+			}
 		}else{
 			path_vector = boost::range::min_element(
 					samplePath_, [&](const std::vector<Eigen::Vector3d>& lp,
