@@ -58,7 +58,9 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 		}
 		if (interface_.mode == "test" or interface_.sampling_osm){
 
+
 //  load path from .osm file
+		if (interface_.sampling_osm) map_ = RoadMap{49.01439, 8.41722};
 		map_.loadFromFile(interface_.path_to_map + interface_.map_name);
 		double x, y;
 //		save the first point
@@ -125,6 +127,11 @@ void PathPublisher::samplingPath(){
 	int points_to_sampling = std::round(interface_.path_length / interface_.point_distance);
 	int sampling_start_point = points_to_sampling + 1;
 	int sampling_end_point = path_vector_whole_.size() - 2 - points_to_sampling;
+	if (sampling_start_point > sampling_end_point){
+		ROS_ERROR_STREAM("path to short!");
+		ros::shutdown();
+		return;
+	}
 	static std::default_random_engine e;
 	static std::uniform_int_distribution<int> n(sampling_start_point, sampling_end_point);
 	int start_point = n(e);
@@ -391,7 +398,9 @@ void PathPublisher::pubnewpath(const ros::Time& timeStamp){
 			return;
 		}
 //		generate a new path and publish
-		samplePath();
+		if (interface_.sampling_osm) samplingPath();
+		else samplePath();
+
 		path_.reset(new nav_msgs::Path);
 		path_vector_.clear();
 		path_->header.frame_id = interface_.frame_id_map;
