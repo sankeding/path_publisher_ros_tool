@@ -237,6 +237,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	vehicle_frame_unit_x.z() = 0.0;
 	vehicle_frame_unit_x = vehicle_frame_unit_x.normalized();
 	const Eigen::Vector2d shifted_vehicle_position = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
+	bool outofpath = false;
 
 //	publish reward's informtion only when path initialized
 	if (sample_flag_){
@@ -276,6 +277,8 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	//	publish reward's msg
 		rl_measurement_msg.angle = signedAngleBetween(vehicle_frame_unit_x, target_direction);
 		rl_measurement_msg.dis = vz_dist * dis;
+		if(abs(rl_measurement_msg.dis)> 0.5)
+			outofpath = true;
 		rl_measurement_msg.path_image = *cv_ptr->toImageMsg();
 		rl_measurement_msg.switcher = switcher;
 		interface_.rl_measurement_publisher.publish(rl_measurement_msg);
@@ -323,7 +326,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			pubnewpath(timer_event.current_expected);
 			sample_flag_ = true;
 		}else{
-			if (path_in_scope and not vehicle_stuck){
+			if (path_in_scope and not vehicle_stuck and not outofpath){
 	//		if still not drive enough far abandon to pubnish new path
 				ROS_DEBUG_STREAM("local path length: " << path_vector_.size() << std::endl <<
 								"current distance: " << index_distance);
