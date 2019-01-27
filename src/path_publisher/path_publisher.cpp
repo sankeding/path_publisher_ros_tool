@@ -155,7 +155,7 @@ void PathPublisher::samplePath(){
 	noise = boost::algorithm::clamp(noise, -0.4, 0.4);
 //	ROS_DEBUG_STREAM("noise of radius: " << noise);
 	double multiplier = 1.;
-	if (interface_.env == "carla") multiplier = 7.;
+	if (interface_.env == "carla") multiplier = 3.;
 	if (interface_.env != "carla" and interface_.env != "anicar")
 		ROS_WARN_STREAM("parameter:env not well defined! Using anicar instead");
 	la_shift *= multiplier;
