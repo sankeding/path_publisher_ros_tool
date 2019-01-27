@@ -314,7 +314,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	//	publish reward's msg
 		rl_measurement_msg.angle = signedAngleBetween(vehicle_frame_unit_x, target_direction);
 		rl_measurement_msg.dis = vz_dist * dis;
-		if(abs(rl_measurement_msg.dis)> 0.5)
+		if(abs(rl_measurement_msg.dis) > 2)
 			outofpath = true;
 		rl_measurement_msg.path_image = *cv_ptr->toImageMsg();
 		rl_measurement_msg.switcher = switcher;
