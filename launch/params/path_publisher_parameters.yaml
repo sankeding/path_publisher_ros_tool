@@ -35,7 +35,7 @@ mode: train
 env: carla
 frame_id_map: map
 frame_id_vehicle: base_link
-least_points: 100
+least_points: 500
 local_scope: 20       #local scope in real world (m) 
 kox_shift: 0.0        # this value is equal to distance between vehicle center and frame_id_vehicle
 point_distance: 0.02    #lager than the value in path generator(old 0.02)
