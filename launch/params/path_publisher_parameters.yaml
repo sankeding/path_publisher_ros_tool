@@ -22,7 +22,7 @@ rotation_noise: 20
 shift_noise: 0.2
 path_length: 6          #whole path has to be larger than this length
 drive_distance: 2     #recommand to be half of path_length
-timer_rate: 20
+timer_rate: 2
 stuck_time: 10
 BB_left_bottom_x: 0.
 BB_left_bottom_y: 0.
