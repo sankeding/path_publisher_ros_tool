@@ -159,7 +159,7 @@ void PathPublisher::samplePath(){
 	if (interface_.env != "carla" and interface_.env != "anicar")
 		ROS_WARN_STREAM("parameter:env not well defined! Using anicar instead");
 	la_shift *= multiplier;
-//generate first kind of sample path, radius 1.5 (m)
+	la_shift = 0;
 	r = (1.5 + noise) * multiplier;
 	for(double angle = 3.*M_PI/4.; angle > -M_PI/4.; angle -= delta){
 		samplePath_[0].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r + la_shift, 0.0));
