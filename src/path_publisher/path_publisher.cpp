@@ -159,7 +159,7 @@ void PathPublisher::samplePath(){
 	if (interface_.env != "carla" and interface_.env != "anicar")
 		ROS_WARN_STREAM("parameter:env not well defined! Using anicar instead");
 	la_shift *= multiplier;
-	la_shift = 0;
+	//la_shift = 0;
 	r = (1.5 + noise) * multiplier;
 	for(double angle = 3.*M_PI/4.; angle > -M_PI/4.; angle -= delta){
 		samplePath_[0].push_back(Eigen::Vector3d(std::cos(angle)*r, std::sin(angle)*r - r + la_shift, 0.0));
@@ -212,8 +212,10 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
         if (points_list.size() <= interface_.least_points){
             const int img_cells = std::round(interface_.local_scope / interface_.point_distance);
             cv::Mat img(img_cells, img_cells, CV_32FC1, cv::Scalar(0));
-            //cv::imshow("Local Path", img);
-            //cv::waitKey(1);
+	    if (interface_.rendering){
+            	cv::imshow("Local Path", img);
+            	cv::waitKey(1);
+	    }
             cv_ptr->header.stamp = timer_event.current_expected;
             //	cv_ptr->header.frame_id = interface_.frame_id_vehicle;
             cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
@@ -235,8 +237,10 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
 		float* imgrow = img.ptr<float>(center_row - rel_row);
 		imgrow[center_col - rel_col] = 255.;
 	}
-        // cv::imshow("Local Path", img);
-        // cv::waitKey(1);
+	if (interface_.rendering){
+        	cv::imshow("Local Path", img);
+        	cv::waitKey(1);
+	}
 	cv_ptr->header.stamp = timer_event.current_expected;
 //	cv_ptr->header.frame_id = interface_.frame_id_vehicle;
 	cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;

@@ -18,7 +18,7 @@ map_name: roadmap.osm
 center_x: 3.0
 center_y: 5.0
 radius_noise: 0.3
-rotation_noise: 10
+rotation_noise: 20
 shift_noise: 0.1
 path_length: 6          #whole path has to be larger than this length
 drive_distance: 2     #recommand to be half of path_length
@@ -29,6 +29,7 @@ BB_left_bottom_x: 0.
 BB_left_bottom_y: 0.
 BB_top_right_x: 10.
 BB_top_right_y: 10.
+rendering: False
 
 
 # following are env sensitive parameters
