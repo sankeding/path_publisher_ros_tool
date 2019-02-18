@@ -43,6 +43,7 @@ gen.add("path_to_map", paramtype='std::string', description="directory to map fi
 gen.add("mode", paramtype='std::string', description="mode of path publisher, train or test")
 gen.add("env", paramtype='std::string', description="run on anicar or simulator")
 gen.add("sampling_osm", paramtype='bool', description="either sampling training path from osm file", default=False)
+gen.add("just_straightway", paramtype='bool', description="just publish straight path", default=True)
 gen.add("rendering", paramtype='bool', description="show path image or not", default=False)
 gen.add("map_name", paramtype='std::string', description="file name of map", default="")
 gen.add("reset_episode_service_name", paramtype='std::string', description="name of service", default="/reset_episode")

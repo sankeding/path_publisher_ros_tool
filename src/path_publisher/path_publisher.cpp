@@ -435,7 +435,7 @@ void PathPublisher::pubnewpath(const ros::Time& timeStamp){
 			else{
 				static std::uniform_int_distribution<int> which_path(0, samplePath_.size() - 1);
 				path_vector = samplePath_.begin() + which_path(e);
-				path_vector = samplePath_.begin() + 2;
+				if (interface_.just_straightway) path_vector = samplePath_.begin() + 2;
 			}
 		}else{
 			path_vector = boost::range::min_element(

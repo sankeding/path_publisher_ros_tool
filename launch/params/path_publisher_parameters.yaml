@@ -18,6 +18,7 @@ map_name: roadmap.osm
 center_x: 3.0
 center_y: 5.0
 radius_noise: 0.3
+just_straightway: False
 rotation_noise: 20
 shift_noise: 0.1
 path_length: 6          #whole path has to be larger than this length
