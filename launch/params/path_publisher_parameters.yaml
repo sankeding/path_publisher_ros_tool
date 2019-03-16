@@ -19,8 +19,8 @@ center_x: 3.0
 center_y: 5.0
 radius_noise: 0.3
 just_straightway: False
-rotation_noise: 20
-shift_noise: 0.1
+rotation_noise: 10
+shift_noise: 0.05
 path_length: 6          #whole path has to be larger than this length
 drive_distance: 2     #recommand to be half of path_length
 timer_rate: 5
@@ -30,7 +30,7 @@ BB_left_bottom_x: 0.
 BB_left_bottom_y: 0.
 BB_top_right_x: 10.
 BB_top_right_y: 10.
-rendering: False
+rendering: True
 
 
 # following are env sensitive parameters

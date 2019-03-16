@@ -60,7 +60,6 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 
 
 //  load path from .osm file
-		if (interface_.sampling_osm) map_ = RoadMap{49.01439, 8.41722};
 		map_.loadFromFile(interface_.path_to_map + interface_.map_name);
 		double x, y;
 //		save the first point

@@ -55,7 +55,7 @@ private:
     nav_msgs::Path::Ptr path_{new nav_msgs::Path};
     nav_msgs::Path::Ptr part_of_path_{new nav_msgs::Path};
     std::vector<std::vector<Eigen::Vector3d>> samplePath_{5};
-    RoadMap map_{0., 0.};
+    RoadMap map_{49.01439, 8.41722};
     Eigen::Vector3d center_;
     int switcher{1};
     double timerecoder_;
