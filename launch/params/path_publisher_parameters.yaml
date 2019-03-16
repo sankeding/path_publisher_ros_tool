@@ -14,7 +14,7 @@
 
 verbosity: debug
 episode_service: /reset_episode
-map_name: roadmap.osm
+map_name: fitted_road_map.osm
 center_x: 3.0
 center_y: 5.0
 radius_noise: 0.3
@@ -30,16 +30,15 @@ BB_left_bottom_x: 0.
 BB_left_bottom_y: 0.
 BB_top_right_x: 10.
 BB_top_right_y: 10.
-rendering: True
+rendering: False
 
 
 # following are env sensitive parameters
-mode: train
-env: carla
-frame_id_map: map
-frame_id_vehicle: base_link
+mode: test
+env: anicar
+frame_id_map: world
+frame_id_vehicle: vehicle_front_axle
 least_points: 500
 local_scope: 20       #local scope in real world (m) 
 kox_shift: 0.0        # this value is equal to distance between vehicle center and frame_id_vehicle
 point_distance: 0.2    #lager than the value in path generator(old 0.02)
-sampling_from_osm: False

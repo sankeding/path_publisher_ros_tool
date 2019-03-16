@@ -42,7 +42,6 @@ gen.add("delta_sigma", paramtype='double', description="delta angle to generate 
 gen.add("path_to_map", paramtype='std::string', description="directory to map file", default="")
 gen.add("mode", paramtype='std::string', description="mode of path publisher, train or test")
 gen.add("env", paramtype='std::string', description="run on anicar or simulator")
-gen.add("sampling_osm", paramtype='bool', description="either sampling training path from osm file", default=False)
 gen.add("just_straightway", paramtype='bool', description="just publish straight path", default=True)
 gen.add("rendering", paramtype='bool', description="show path image or not", default=False)
 gen.add("map_name", paramtype='std::string', description="file name of map", default="")

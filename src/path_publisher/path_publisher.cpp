@@ -56,7 +56,7 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 				ROS_WARN_STREAM(e.what());
 			}
 		}
-		if (interface_.mode == "test" or interface_.sampling_osm){
+		if (interface_.mode == "test"){
 
 
 //  load path from .osm file
@@ -84,8 +84,6 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 		ROS_DEBUG_STREAM("load road finished." << std::endl <<
 				"the whole path length: " << path_->poses.size());
 
-//		skip following steps if sampling osm
-		if (interface_.sampling_osm) return;
 //		set prev_pos_index mark
 		const Eigen::Vector3d vehicle_position = vehicle_pose.translation();
 		Eigen::Vector3d vehicle_frame_unit_x = vehicle_pose.rotation() * Eigen::Vector3d::UnitX();
@@ -404,8 +402,7 @@ void PathPublisher::pubnewpath(const ros::Time& timeStamp){
 			return;
 		}
 //		generate a new path and publish
-		if (interface_.sampling_osm) samplingPath();
-		else samplePath();
+		samplePath();
 
 		path_.reset(new nav_msgs::Path);
 		path_vector_.clear();
@@ -430,12 +427,9 @@ void PathPublisher::pubnewpath(const ros::Time& timeStamp){
 		std::vector<std::vector<Eigen::Vector3d>>::iterator path_vector;
 //find the sample path whose end position is the closet to center of map
 		if (interface_.env == "carla"){
-			if(interface_.sampling_osm) path_vector = samplePath_.begin();
-			else{
-				static std::uniform_int_distribution<int> which_path(0, samplePath_.size() - 1);
-				path_vector = samplePath_.begin() + which_path(e);
-				if (interface_.just_straightway) path_vector = samplePath_.begin() + 2;
-			}
+			static std::uniform_int_distribution<int> which_path(0, samplePath_.size() - 1);
+			path_vector = samplePath_.begin() + which_path(e);
+			if (interface_.just_straightway) path_vector = samplePath_.begin() + 2;
 		}else{
 			path_vector = boost::range::min_element(
 					samplePath_, [&](const std::vector<Eigen::Vector3d>& lp,
