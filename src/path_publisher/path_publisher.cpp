@@ -236,6 +236,7 @@ bool PathPublisher::imageGenerator(Eigen::Affine3d& vehicle_pose, const ros::Tim
         	cv::imshow("Local Path", img);
         	cv::waitKey(1);
 	}
+	ROS_DEBUG_STREAM("image siye: " << img.size);
 	cv_ptr->header.stamp = timer_event.current_expected;
 //	cv_ptr->header.frame_id = interface_.frame_id_vehicle;
 	cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
