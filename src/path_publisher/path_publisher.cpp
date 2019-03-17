@@ -57,54 +57,52 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 			}
 		}
 		if (interface_.mode == "test"){
-
-
-//  load path from .osm file
-		map_.loadFromFile(interface_.path_to_map + interface_.map_name);
-		double x, y;
-//		save the first point
-		map_.getVertexMeters(1, 0, x, y);
-		pose_ros.pose.position.x = x;
-		pose_ros.pose.position.y = y;
-		path_vector_whole_.emplace_back(Eigen::Vector2d(x, y));
-		path_->poses.emplace_back(pose_ros);
-
-		double accumulated_length = 0.;
-		for (int i = 1; i < (int)map_.trajectories.at(1).size(); i++){
-			map_.getVertexMeters(1, i, x, y);
+	//  load path from .osm file
+			map_.loadFromFile(interface_.path_to_map + interface_.map_name);
+			double x, y;
+	//		save the first point
+			map_.getVertexMeters(1, 0, x, y);
 			pose_ros.pose.position.x = x;
 			pose_ros.pose.position.y = y;
-			accumulated_length += (path_vector_whole_.back() - Eigen::Vector2d(x, y)).norm();
-			if (accumulated_length > interface_.point_distance){
-				path_vector_whole_.emplace_back(Eigen::Vector2d(x, y));
-				path_->poses.emplace_back(pose_ros);
-				accumulated_length = 0.;
-			}
-		}
-		ROS_DEBUG_STREAM("load road finished." << std::endl <<
-				"the whole path length: " << path_->poses.size());
+			path_vector_whole_.emplace_back(Eigen::Vector2d(x, y));
+			path_->poses.emplace_back(pose_ros);
 
-//		set prev_pos_index mark
-		const Eigen::Vector3d vehicle_position = vehicle_pose.translation();
-		Eigen::Vector3d vehicle_frame_unit_x = vehicle_pose.rotation() * Eigen::Vector3d::UnitX();
-		vehicle_frame_unit_x.z() = 0.0;
-		vehicle_frame_unit_x = vehicle_frame_unit_x.normalized();
-		const Eigen::Vector2d pos2d = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
-		//   find the closet point to vehicle on path
-		prev_pos_whole_index_ = boost::range::min_element(
-				path_vector_whole_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
-			return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
-		});
-		std::vector<Eigen::Vector2d>::iterator path_start, path_end;
-		setCliper(prev_pos_whole_index_, path_vector_whole_, path_start, path_end);
-		clipPath(path_start, path_end, path_vector_whole_, path_vector_, part_of_path_);
-		ROS_DEBUG_STREAM("whole path length: " << path_vector_whole_.size() << std::endl <<
-							"part of path length: " << path_vector_.size() << std::endl <<
-							"path messsage length: " << part_of_path_->poses.size());
-		prev_pos_index_ = boost::range::min_element(
-						path_vector_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
-					return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
-				});
+			double accumulated_length = 0.;
+			for (int i = 1; i < (int)map_.trajectories.at(1).size(); i++){
+				map_.getVertexMeters(1, i, x, y);
+				pose_ros.pose.position.x = x;
+				pose_ros.pose.position.y = y;
+				accumulated_length += (path_vector_whole_.back() - Eigen::Vector2d(x, y)).norm();
+				if (accumulated_length > interface_.point_distance){
+					path_vector_whole_.emplace_back(Eigen::Vector2d(x, y));
+					path_->poses.emplace_back(pose_ros);
+					accumulated_length = 0.;
+				}
+			}
+			ROS_DEBUG_STREAM("load road finished." << std::endl <<
+					"the whole path length: " << path_->poses.size());
+
+	//		set prev_pos_index mark
+			const Eigen::Vector3d vehicle_position = vehicle_pose.translation();
+			Eigen::Vector3d vehicle_frame_unit_x = vehicle_pose.rotation() * Eigen::Vector3d::UnitX();
+			vehicle_frame_unit_x.z() = 0.0;
+			vehicle_frame_unit_x = vehicle_frame_unit_x.normalized();
+			const Eigen::Vector2d pos2d = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
+			//   find the closet point to vehicle on path
+			prev_pos_whole_index_ = boost::range::min_element(
+					path_vector_whole_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+				return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
+			});
+			std::vector<Eigen::Vector2d>::iterator path_start, path_end;
+			setCliper(prev_pos_whole_index_, path_vector_whole_, path_start, path_end);
+			clipPath(path_start, path_end, path_vector_whole_, path_vector_, part_of_path_);
+			ROS_DEBUG_STREAM("whole path length: " << path_vector_whole_.size() << std::endl <<
+								"part of path length: " << path_vector_.size() << std::endl <<
+								"path messsage length: " << part_of_path_->poses.size());
+			prev_pos_index_ = boost::range::min_element(
+							path_vector_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+						return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
+					});
 		}
 	}
 
@@ -290,7 +288,6 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 
 		if (interface_.mode == "test"){
 			index_distance = std::distance(prev_pos_index_, it);
-			//	TODO: check vehicle get out of boundary or not(in anicar environment)
 		}else{
 			index_distance = std::distance(path_vector_.begin(), it);
 		}
@@ -324,7 +321,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 	}
 
 	if (interface_.mode == "test"){
-//    decide to pubnish a new path or not
+//    decide whether to pubnish a new path or not
 //		initial path at least once
 		if (sample_flag_){
 			//		if still not drive so far abandon to pubnish new path
