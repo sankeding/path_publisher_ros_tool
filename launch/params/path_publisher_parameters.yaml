@@ -14,7 +14,7 @@
 
 verbosity: debug
 episode_service: /reset_episode
-map_name: fitted_road_map.osm
+map_name: res_Town2_BEH_roadmap.osm
 center_x: 3.0
 center_y: 5.0
 radius_noise: 0.3
