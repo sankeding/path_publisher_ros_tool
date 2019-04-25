@@ -68,7 +68,7 @@ gen.add("road_length", paramtype='double', description="the length of sampling p
 # Publisher and subscriber (group name will show up in dynamic_reconfigure window)
 pub_sub = gen.add_group("Publisher and subscriber")
 pub_sub.add_publisher("path_publisher", message_type="nav_msgs::Path", description="path publisher", default_topic="/path", configurable=True)
-pub_sub.add_publisher("rl_measurement_publisher", message_type="path_publisher_ros_tool::rl_measurement", description="rl measurement publisher", default_topic="/rl_measurement", configurable=True)
+
 
 
 # DO NOT TOUCH THIS LINE

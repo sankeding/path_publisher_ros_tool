@@ -1,11 +1,8 @@
 <launch>
-<arg name="rl_measurement_topic"/>
   <arg name="config" default="$(find path_publisher_ros_tool)/launch/params/path_publisher_parameters.yaml" />
   <node pkg="path_publisher_ros_tool" type="path_publisher" name="path_publisher" output="screen">
     <rosparam command="load" file="$(arg config)"/>
-    <param name="path_to_map" value="$(find path_publisher_ros_tool)/res/" />
-    <param name="rl_measurement_publisher_topic" value="$(arg rl_measurement_topic)" />
-
+    <param name="path_to_map" value="$(find path_generator_ros_tool)/res/" />
   </node>
 
 </launch>
