@@ -4,7 +4,7 @@
 #include <boost/algorithm/clamp.hpp>
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/range/algorithm/min_element.hpp>
-#include "path_publisher_ros_tool/rl_measurement.h"
+
 
 namespace path_publisher_ros_tool {
 
@@ -36,7 +36,6 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 	pose_ros.pose.position.z = 0.0;
 	pose_ros.header = path_->header;
 
-	reset_episode_client_ = nhPrivate.serviceClient<ResetEpisode>(interface_.reset_episode_service_name);
 
     if (interface_.mode != "train" && interface_.mode != "test")
     {
@@ -293,32 +292,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 			index_distance = std::distance(path_vector_.begin(), it);
 		}
 
-		path_publisher_ros_tool::rl_measurement rl_measurement_msg;
-		const double dis = (shifted_vehicle_position - *it).norm();
-		Eigen::Vector3d target_direction;
-		target_direction.head<2>() = *(it + 3) - *(it - 3);
-		target_direction.z() = 0.;
-		Eigen::Vector3d shifted_v_p_3d;
-		shifted_v_p_3d.head<2>() = shifted_vehicle_position;
-		shifted_v_p_3d.z() = 0.;
-		Eigen::Vector3d closet_3d;
-		closet_3d.head<2>() = *it;
-		closet_3d.z() = 0.;
-		const double vz_dist = boost::math::sign(target_direction.cross(closet_3d - shifted_v_p_3d).z());
-
-		//	generate the image of local path
-		cv_bridge::CvImagePtr cv_ptr{new cv_bridge::CvImage};
-		path_in_scope = PathPublisher::imageGenerator(vehicle_pose, timer_event, cv_ptr);
-
-	//	publish reward's msg
-		rl_measurement_msg.angle = signedAngleBetween(vehicle_frame_unit_x, target_direction);
-		rl_measurement_msg.dis = vz_dist * dis;
-		if(abs(rl_measurement_msg.dis) > 2)
-			outofpath = true;
-		rl_measurement_msg.path_image = *cv_ptr->toImageMsg();
-		rl_measurement_msg.switcher = switcher;
-		interface_.rl_measurement_publisher.publish(rl_measurement_msg);
-        cv_ptr->image.release();
+		
 	}
 
 	if (interface_.mode == "test"){
@@ -369,20 +343,7 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 				if ((index_distance / double(path_vector_.size())) < 0.7) return;
 			}
 	//	call reset vehicle service
-            try {
-                ROS_DEBUG_STREAM("PP: Reset Episode service is calling");
-                ResetEpisode resetEpisode;
-                resetEpisode.request.reset = true;
-                in_reset_ = true;
-                reset_episode_client_.waitForExistence();
-                reset_episode_client_.call(resetEpisode);
-                ROS_DEBUG_STREAM("PP: Reset Episode service end");
-                in_reset_ = false;
-                pubnewpath(ros::Time::now());
-                switcher *= -1;
-            }catch (const tf2::TransformException& e){
-                ROS_ERROR_STREAM(e.what());
-            }
+           
 
 		}
 	}

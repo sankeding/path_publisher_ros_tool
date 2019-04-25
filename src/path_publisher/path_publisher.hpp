@@ -15,14 +15,13 @@
 #include <sensor_msgs/Image.h>
 
 #include "path_publisher_ros_tool/PathPublisherInterface.h"
-#include "rl_anicar_interface_ros_tool/reset_episode.h"
+
 
 namespace path_publisher_ros_tool {
 
 class PathPublisher {
 
     using Interface = PathPublisherInterface;
-    using ResetEpisode = rl_anicar_interface_ros_tool::reset_episode;
     using Msg = std_msgs::Header;
 
 public:
