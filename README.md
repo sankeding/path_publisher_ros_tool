@@ -10,4 +10,4 @@ TODO: Write a project description
 
 ## Usage
 
-A project that publishes local path for lateral controller. It is basically now used for KAL vehicles.
+A project that publishes local path for lateral controller. It is basically now used for KAL vehicles. For more information, have a look to sample demo launch files of KAL. 
