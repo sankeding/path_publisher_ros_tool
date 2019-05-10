@@ -10,4 +10,4 @@ TODO: Write a project description
 
 ## Usage
 
-TODO: Write usage instructions
+A project that publishes local path for lateral controller. It is basically now used for KAL vehicles.
