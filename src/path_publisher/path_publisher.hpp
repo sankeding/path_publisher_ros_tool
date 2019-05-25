@@ -13,6 +13,7 @@
 #include <opencv2/opencv.hpp>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Image.h>
+#include <std_msgs/String.h>
 
 #include "path_publisher_ros_tool/PathPublisherInterface.h"
 
@@ -40,6 +41,11 @@ private:
 				nav_msgs::Path::Ptr& path_ptr);
     void setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::vector<Eigen::Vector2d>& source, std::vector<Eigen::Vector2d>::iterator& start, std::vector<Eigen::Vector2d>::iterator& it_end);
     void pubnewpath(const ros::Time&);
+
+
+    ros::Subscriber sign_subscriber_;      //
+	std::string sign_;
+	void signCallback(const std_msgs::String::ConstPtr& msg);                         //
 
     Interface interface_;
     dynamic_reconfigure::Server<Interface::Config> reconfigureServer_;

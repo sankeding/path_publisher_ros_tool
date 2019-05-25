@@ -67,6 +67,7 @@ gen.add("road_length", paramtype='double', description="the length of sampling p
 
 # Publisher and subscriber (group name will show up in dynamic_reconfigure window)
 pub_sub = gen.add_group("Publisher and subscriber")
+#pub_sub.add_subscriber("sign_subscriber", message_type="std_msgs::String", description="example subscriber", default_topic="/sign_out_topic", no_delay=True, configurable=True)
 pub_sub.add_publisher("path_publisher", message_type="nav_msgs::Path", description="path publisher", default_topic="/path", configurable=True)
 
 

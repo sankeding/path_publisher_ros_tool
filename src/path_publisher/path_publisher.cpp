@@ -22,6 +22,12 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
      * New subscribers can be created with "add_subscriber" in "cfg/PathPublisher.if file.
      * Don't forget to register your callbacks here!
      */
+
+    sign_subscriber_ = nhPrivate.subscribe("/sign_out_topic",
+    								        1000,
+    								        &PathPublisher::signCallback,
+    								        this);                                           //
+
     reconfigureServer_.setCallback(boost::bind(&PathPublisher::reconfigureRequest, this, _1, _2));
 
 //  initial path_
@@ -79,7 +85,7 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 				}
 			}
 			ROS_DEBUG_STREAM("load road finished." << std::endl <<
-					"the whole path length: " << path_->poses.size());
+			"the whole path length: " << path_->poses.size());
 
 	//		set prev_pos_index mark
 			const Eigen::Vector3d vehicle_position = vehicle_pose.translation();
@@ -109,6 +115,15 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 
     rosinterface_handler::showNodeInfo();
 }
+
+
+void PathPublisher::signCallback(const std_msgs::String::ConstPtr& msg){
+	sign_ = msg->data;
+	ROS_DEBUG_STREAM("received sign info:"<< sign_ <<std::endl);
+}
+
+
+
 
 double signedAngleBetween(const Eigen::Vector3d& a, const Eigen::Vector3d& b) {
 	const double vz = boost::math::sign(a.cross(b).z());
@@ -322,6 +337,9 @@ void PathPublisher::callbackTimer(const ros::TimerEvent& timer_event) {
 		ROS_DEBUG_STREAM("pos index moving: " << index_distance << std::endl<<
 								"current whole path index mark: " << std::distance(path_vector_whole_.begin(), prev_pos_whole_index_) << std::endl <<
 								"current path start index: " << std::distance(path_vector_whole_.begin(), path_start) << std::endl <<
+
+								    "received sign info:"<< sign_.size() <<std::endl<<
+
 								"current path end index: " << std::distance(path_vector_whole_.begin(), path_end));
 		clipPath(path_start, path_end, path_vector_whole_, path_vector_, part_of_path_);
 		//		set new mark of prev pos index
