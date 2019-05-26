@@ -45,20 +45,21 @@ private:
     void pubnewpath(const ros::Time&);
 
 
-
+    /***********************/
 	void readAllMaps( const std::string& );
-
+    void setPath_Callback(const std_msgs::Int8::ConstPtr& msg);                      //
 
 
 	const std::vector<std::string> all_maps_name_{"1_A_B_forward", "2_C_D_forward", "3_A_C_right", "4_B_D_left",
                                                   "5_A_left",      "6_B_right",     "7_C_left",    "8_D_right"};
+	std::vector<std::vector<Eigen::Vector2d>> all_path_vecotr_whole_{all_maps_name_.size()};
 
 
 
     ros::Subscriber set_path_subscriber_;  //
 	int set_path_;
-	void setPath_Callback(const std_msgs::Int8::ConstPtr& msg);                      //
 
+/****************************/
     Interface interface_;
     dynamic_reconfigure::Server<Interface::Config> reconfigureServer_;
 
@@ -72,7 +73,6 @@ private:
     nav_msgs::Path::Ptr path_{new nav_msgs::Path};
     nav_msgs::Path::Ptr part_of_path_{new nav_msgs::Path};
     std::vector<std::vector<Eigen::Vector3d>> samplePath_{5};
-    RoadMap map_{49.01439, 8.41722};
     Eigen::Vector3d center_;
     int switcher{1};
     double timerecoder_;

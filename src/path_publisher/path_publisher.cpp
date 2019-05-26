@@ -31,8 +31,7 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
     reconfigureServer_.setCallback(boost::bind(&PathPublisher::reconfigureRequest, this, _1, _2));
 
 //  initial path_
-    std::string map_path = "../res/pathes";
-    readAllMaps(map_path);
+    readAllMaps(interface_.path_to_map);
 
     rosinterface_handler::showNodeInfo();
 }
@@ -44,11 +43,31 @@ void PathPublisher::setPath_Callback(const std_msgs::Int8::ConstPtr& msg){
 }
 
 void PathPublisher::readAllMaps(const std::string & mapPath) {
-    for (const auto& path: all_maps_name_){
-        
+    std::vector<std::vector<Eigen::Vector2d>>::iterator iter = all_path_vecotr_whole_.begin();
+    int count = 1;
+    for(const auto& mapName: all_maps_name_){
+        RoadMap map{49.01439, 8.41722};
+        map.loadFromFile(mapPath + mapName + ".osm");
+        double x, y;
+        //save the first point
+        map.getVertexMeters(1, 0, x, y);
+        (*iter).emplace_back(Eigen::Vector2d(x, y));
 
+        double accumulated_length = 0.;
+        for(int i = 1; i < (int)map.trajectories.at(1).size(); i++){
+            map.getVertexMeters(1, i, x, y);
+            accumulated_length += ((*iter).back() - Eigen::Vector2d(x, y)).norm();
+            if(accumulated_length > interface_.point_distance){
+                (*iter).emplace_back(Eigen::Vector2d(x, y));
+                accumulated_length = 0;
+            }
+        }
+
+        ROS_INFO_STREAM("load map Nr." << count << " finished." << std::endl <<
+                         "the whole path length: " << (*iter).size() << std::endl);
+        iter++;
+        count++;
     }
-
 }
 
 
