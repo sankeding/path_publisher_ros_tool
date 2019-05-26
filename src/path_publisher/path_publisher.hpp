@@ -31,7 +31,7 @@ public:
     PathPublisher(ros::NodeHandle, ros::NodeHandle);
 
 private:
-    void callbackTimer(const ros::TimerEvent&);
+
     void reconfigureRequest(const Interface::Config&, uint32_t);
     void samplePath();
     void samplingPath();
@@ -46,19 +46,23 @@ private:
 
 
     /***********************/
+    void pathPublishCallback(const ros::TimerEvent&);
 	void readAllMaps( const std::string& );
     void setPath_Callback(const std_msgs::Int8::ConstPtr& msg);                      //
-
+    void initialFirstMap();
+    void getVehiclePose();
 
 	const std::vector<std::string> all_maps_name_{"1_A_B_forward", "2_C_D_forward", "3_A_C_right", "4_B_D_left",
                                                   "5_A_left",      "6_B_right",     "7_C_left",    "8_D_right"};
 	std::vector<std::vector<Eigen::Vector2d>> all_path_vecotr_whole_{all_maps_name_.size()};
 
 
-
+    ros::Timer path_publish_timer_;
     ros::Subscriber set_path_subscriber_;  //
 	int set_path_;
 
+    Eigen::Affine3d vehicle_pose_;
+    Eigen::Vector3d center_;
 /****************************/
     Interface interface_;
     dynamic_reconfigure::Server<Interface::Config> reconfigureServer_;
@@ -68,12 +72,11 @@ private:
     tf2_ros::Buffer tfBuffer_;
     tf2_ros::TransformListener tfListener_{tfBuffer_};
     tf2_ros::TransformBroadcaster tfBroadcaster_;
-    ros::Timer timer_;
+
 
     nav_msgs::Path::Ptr path_{new nav_msgs::Path};
     nav_msgs::Path::Ptr part_of_path_{new nav_msgs::Path};
     std::vector<std::vector<Eigen::Vector3d>> samplePath_{5};
-    Eigen::Vector3d center_;
     int switcher{1};
     double timerecoder_;
     std::vector<Eigen::Vector2d> path_vector_;
