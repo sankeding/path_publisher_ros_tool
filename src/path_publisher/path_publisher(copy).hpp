@@ -14,7 +14,6 @@
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Image.h>
 #include <std_msgs/String.h>
-#include <std_msgs/Int8.h>
 
 #include "path_publisher_ros_tool/PathPublisherInterface.h"
 
@@ -45,19 +44,9 @@ private:
     void pubnewpath(const ros::Time&);
 
 
-
-	void readAllMaps( const std::string& );
-
-
-
-	const std::vector<std::string> all_maps_name_{"1_A_B_forward", "2_C_D_forward", "3_A_C_right", "4_B_D_left",
-                                                  "5_A_left",      "6_B_right",     "7_C_left",    "8_D_right"};
-
-
-
-    ros::Subscriber set_path_subscriber_;  //
-	int set_path_;
-	void setPath_Callback(const std_msgs::Int8::ConstPtr& msg);                      //
+    ros::Subscriber sign_subscriber_;      //
+	std::string sign_;
+	void signCallback(const std_msgs::String::ConstPtr& msg);                         //
 
     Interface interface_;
     dynamic_reconfigure::Server<Interface::Config> reconfigureServer_;
