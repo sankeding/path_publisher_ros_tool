@@ -22,7 +22,7 @@ just_straightway: False
 rotation_noise: 10
 shift_noise: 0.05
 path_length: 4          #whole path has to be larger than this length
-drive_distance: 2     #recommand to be half of path_length
+drive_distance: 1.     #recommand to be half of path_length
 timer_rate: 5
 delta_sigma: 0.005
 stuck_time: 10
@@ -40,5 +40,5 @@ frame_id_map: world
 frame_id_vehicle: vehicle_front_axle
 least_points: 10
 local_scope: 2       #local scope in real world (m); local_scope / point_distance should be equal to 100 
-kox_shift: -0.2        # this value is equal to distance between vehicle center and frame_id_vehicle
+kox_shift: -0.2       # this value is equal to distance between vehicle center and frame_id_vehicle       //kos_shift???
 point_distance: 0.02    #lager than the value in path generator(old 0.02)

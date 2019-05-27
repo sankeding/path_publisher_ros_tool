@@ -34,7 +34,7 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
     reconfigureServer_.setCallback(boost::bind(&PathPublisher::reconfigureRequest, this, _1, _2));
 
 //  initial path_
-    center_ = Eigen::Vector3d(interface_.center_x, interface_.center_y, 0.);
+    center_ = Eigen::Vector3d(interface_.center_x, interface_.center_y, 0.);             //default x=3,y=5
     readAllMaps(interface_.path_to_map);   //load maps to two-dimensional vector
     initialPartOfPath(actual_map_);
 
@@ -64,6 +64,7 @@ void PathPublisher::pathPublishCallback(const ros::TimerEvent & timerEvent) {
     const Eigen::Vector2d shifted_vehicle_position = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
 
 
+    wanted_map_ = interface_.wanted_map;
     if(actual_map_ == wanted_map_){
 
         //only when the vehicle go enough distance, publish new path
