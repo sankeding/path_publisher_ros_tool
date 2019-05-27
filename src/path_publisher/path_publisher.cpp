@@ -9,12 +9,15 @@
 namespace path_publisher_ros_tool {
 
 PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate)
-        : interface_{nhPrivate}, reconfigureServer_{nhPrivate} {
+        : interface_{nhPrivate}, reconfigureServer_{nhPrivate}{
 
     /**
      * Initialization
      */
     interface_.fromParamServer();
+    wanted_map_ = interface_.wanted_map;
+    actual_map_ = interface_.actual_map;
+    actual_map_index_ = interface_.actual_map -1;
 
     /**
      * Set up callbacks for subscribers and reconfigure.
@@ -33,7 +36,7 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 //  initial path_
     center_ = Eigen::Vector3d(interface_.center_x, interface_.center_y, 0.);
     readAllMaps(interface_.path_to_map);   //load maps to two-dimensional vector
-    initialFirstMap();
+    initialPartOfPath(actual_map_);
 
     path_publish_timer_ = nhPrivate.createTimer(ros::Rate(interface_.timer_rate), &PathPublisher::pathPublishCallback, this);
 
@@ -42,21 +45,85 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
 
 
 void PathPublisher::setPath_Callback(const std_msgs::Int8::ConstPtr& msg){
-	set_path_ = msg->data;
+	set_path_ = msg->data;         //wanted_map = msg->data
 	ROS_DEBUG_STREAM("received set_path info:"<< set_path_ <<std::endl);
 }
 
 
 void PathPublisher::pathPublishCallback(const ros::TimerEvent & timerEvent) {
 
-    interface_.path_publisher.publish(part_of_path_);
+    int index_distance{0};    //how many points the car go through
+
+    //get the vehicle position
+    getVehiclePose();
+    //shift vehicle position towards x direction kos_shift long
+    const Eigen::Vector3d vehicle_position = vehicle_pose_.translation();
+    Eigen::Vector3d vehicle_frame_unit_x = vehicle_pose_.rotation() * Eigen::Vector3d::UnitX();
+    vehicle_frame_unit_x.z() = 0.0;
+    vehicle_frame_unit_x = vehicle_frame_unit_x.normalized();
+    const Eigen::Vector2d shifted_vehicle_position = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
+
+
+    if(actual_map_ == wanted_map_){
+
+        //only when the vehicle go enough distance, publish new path
+        if(sample_flag_){
+            //   find the closet point to vehicle on path (this moment)
+            auto it = boost::range::min_element(
+                    path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+                        return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
+                    });
+            index_distance = std::distance(prev_pos_index_, it);             //how many points the car go through
+            if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
+        }else{
+            //after initial or change path, publish the initial part_of_path_ first and set sample to true
+            sample_flag_ = true;
+            interface_.path_publisher.publish(part_of_path_);
+            return;
+        }
+
+        //set new path to publish
+        //clip a part of path to publish
+        std::vector<Eigen::Vector2d>::iterator path_start;
+        std::vector<Eigen::Vector2d>::iterator path_end;
+        //reset prev pose whole index
+        for(int i = 0; i < index_distance; i++){
+            if (prev_pos_whole_index_ != all_path_vector_whole_[actual_map_index_].end() - 1)
+                prev_pos_whole_index_++;
+            else
+                prev_pos_whole_index_ = all_path_vector_whole_[actual_map_index_].begin();
+        }
+        setCliper(prev_pos_whole_index_, all_path_vector_whole_[actual_map_index_], path_start, path_end);
+        ROS_DEBUG_STREAM("pos index moving: " << index_distance << std::endl<<
+                                              "current whole path index mark: " << std::distance(all_path_vector_whole_[actual_map_index_].begin(), prev_pos_whole_index_) << std::endl <<
+                                              "current path start index: " << std::distance(all_path_vector_whole_[actual_map_index_].begin(), path_start) << std::endl <<
+                                              "current path end index: " << std::distance(all_path_vector_whole_[actual_map_index_].begin(), path_end));
+        clipPath(path_start, path_end, all_path_vector_whole_[actual_map_index_], path_vector_, part_of_path_);
+        //		set new mark of prev pos index
+        prev_pos_index_ = boost::range::min_element(
+                path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+                    return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
+                });
+
+        interface_.path_publisher.publish(part_of_path_);
+
+        ROS_INFO_STREAM("actual map: " << actual_map_ << std::endl << "actual prev_pos_index point: " << *prev_pos_index_<< std::endl);
+    }
+    else{
+        actual_map_ = wanted_map_;
+        actual_map_index_ = actual_map_ - 1;
+        initialPartOfPath(actual_map_);
+        sample_flag_ = false;
+    }
+
+
     ROS_INFO_STREAM("pathPublishCallback running");
 
 
 }
 
 void PathPublisher::readAllMaps(const std::string & mapPath) {
-    std::vector<std::vector<Eigen::Vector2d>>::iterator iter = all_path_vecotr_whole_.begin();
+    std::vector<std::vector<Eigen::Vector2d>>::iterator iter = all_path_vector_whole_.begin();
     int count = 1;
     for(const auto& mapName: all_maps_name_){
         RoadMap map{49.01439, 8.41722};
@@ -83,8 +150,9 @@ void PathPublisher::readAllMaps(const std::string & mapPath) {
     }
 }
 
-void PathPublisher::initialFirstMap(){
+void PathPublisher::initialPartOfPath( const int actual_map ){
 
+    actual_map_index_ = actual_map - 1;
     path_->header.frame_id = interface_.frame_id_map;
     path_->header.stamp = ros::Time::now();
     geometry_msgs::PoseStamped pose_ros;
@@ -106,24 +174,22 @@ void PathPublisher::initialFirstMap(){
 
     //find the closet point(on path) to center of vehicle
     prev_pos_whole_index_ = boost::range::min_element(
-            all_path_vecotr_whole_[0], [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+            all_path_vector_whole_[actual_map_index_], [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
                 return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
             });
 
     std::vector<Eigen::Vector2d>::iterator path_start, path_end;
-    setCliper(prev_pos_whole_index_, all_path_vecotr_whole_[0], path_start, path_end);
-    clipPath(path_start, path_end, all_path_vecotr_whole_[0], path_vector_, part_of_path_);             //give value to path_vector and part_of_path_
+    setCliper(prev_pos_whole_index_, all_path_vector_whole_[actual_map_index_], path_start, path_end);
+    clipPath(path_start, path_end, all_path_vector_whole_[actual_map_index_], path_vector_, part_of_path_);             //give value to path_vector and part_of_path_
 
-    ROS_DEBUG_STREAM("initial whole path length: " << all_path_vecotr_whole_[0].size() << std::endl <<
+    ROS_DEBUG_STREAM("initial whole path length: " << all_path_vector_whole_[actual_map_index_].size() << std::endl <<
                                            "initial part of path length: " << path_vector_.size() << std::endl <<
                                            "initial path message length: " << part_of_path_->poses.size());
 
-    /*
     prev_pos_index_ = boost::range::min_element(
             path_vector_, [&pos2d](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
                 return (le - pos2d).squaredNorm() < (re - pos2d).squaredNorm();
             });
-    */
 }
 
 

@@ -49,17 +49,20 @@ private:
     void pathPublishCallback(const ros::TimerEvent&);
 	void readAllMaps( const std::string& );
     void setPath_Callback(const std_msgs::Int8::ConstPtr& msg);                      //
-    void initialFirstMap();
+    void initialPartOfPath(const int actual_map);
     void getVehiclePose();
 
 	const std::vector<std::string> all_maps_name_{"1_A_B_forward", "2_C_D_forward", "3_A_C_right", "4_B_D_left",
                                                   "5_A_left",      "6_B_right",     "7_C_left",    "8_D_right"};
-	std::vector<std::vector<Eigen::Vector2d>> all_path_vecotr_whole_{all_maps_name_.size()};
+	std::vector<std::vector<Eigen::Vector2d>> all_path_vector_whole_{all_maps_name_.size()};
 
 
     ros::Timer path_publish_timer_;
     ros::Subscriber set_path_subscriber_;  //
 	int set_path_;
+	int wanted_map_;
+	int actual_map_;
+	int actual_map_index_;       //actual_map_index = actual_map - 1
 
     Eigen::Affine3d vehicle_pose_;
     Eigen::Vector3d center_;
