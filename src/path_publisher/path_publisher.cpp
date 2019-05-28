@@ -67,7 +67,7 @@ void PathPublisher::pathPublishCallback(const ros::TimerEvent & timerEvent) {
     const Eigen::Vector2d shifted_vehicle_position = (vehicle_position + vehicle_frame_unit_x * interface_.kos_shift).head<2>();
 
 
-    wanted_map_ = interface_.wanted_map;
+    //wanted_map_ = interface_.wanted_map;
     if(actual_map_ == wanted_map_){
 
         //only when the vehicle go enough distance, publish new path
