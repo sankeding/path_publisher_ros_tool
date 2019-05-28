@@ -37,6 +37,8 @@ gen.add_verbosity_param(configurable=True)
 # Your Params here
 gen.add("actual_map", paramtype='int', description="number of actual map", default=1, min=1, max=8, configurable=True, global_scope=False)
 gen.add("wanted_map", paramtype='int', description="number of map wanted", default=2, min=1, max=8, configurable=True, global_scope=False)
+gen.add("near_center_distance", paramtype='double', description="the distance to decide near center or not", default=2.5, min=0, max=8, configurable=True, global_scope=False)
+gen.add("sign", paramtype='std::string', description="detected sign: NO_SIGN, LEFT_SIGN, RIGHT_SIGN", default="NO_SIGN")
 
 gen.add("timer_rate", paramtype='double', description="publisher frequency", default=5, min=0, max=10, configurable=True, global_scope=False)
 gen.add("kos_shift", paramtype='double', description="distance from vehicle frame id referred position to real vehicle center point", default=-0.4, min=-0.5, max=0.5, configurable=True, global_scope=False)

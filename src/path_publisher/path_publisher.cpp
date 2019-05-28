@@ -9,7 +9,9 @@
 namespace path_publisher_ros_tool {
 
 PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate)
-        : interface_{nhPrivate}, reconfigureServer_{nhPrivate}{
+        : interface_{nhPrivate}, reconfigureServer_{nhPrivate}, map_center_(7.0, 3.1),
+          map_A_(8.5, 5.45), map_B_(4.56, 3.36), map_C_(6.3, 0.24), map_D_(9.72, 2.07),
+          near_center_{false},pass_center_{false},sign_{"NO_SIGN"}{
 
     /**
      * Initialization
@@ -39,6 +41,7 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
     initialPartOfPath(actual_map_);
 
     path_publish_timer_ = nhPrivate.createTimer(ros::Rate(interface_.timer_rate), &PathPublisher::pathPublishCallback, this);
+    switch_wanted_map_timer_ = nhPrivate.createTimer(ros::Rate(10), &PathPublisher::switchWantedMapCallback, this);
 
     rosinterface_handler::showNodeInfo();
 }
@@ -277,6 +280,67 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
     }
     it_end = path_end;
 }
+
+
+/*******Functions relative to switch the maps (use which logic)***********/
+bool PathPublisher::nearCenter() {
+    getVehiclePose();
+    const Eigen::Vector2d vector_position = vehicle_pose_.translation().head<2>();
+    return  (vector_position - map_center_).norm() < interface_.near_center_distance;
+}
+
+int PathPublisher::nearTurnPoint() {
+    getVehiclePose();
+    const Eigen::Vector2d vector_position = vehicle_pose_.translation().head<2>();
+    std::vector<double> distance;
+    distance.push_back((vector_position - map_A_).norm());
+    distance.push_back((vector_position - map_B_).norm());
+    distance.push_back((vector_position - map_C_).norm());
+    distance.push_back((vector_position - map_D_).norm());
+    auto minIter = std::min_element(distance.begin(), distance.end());
+
+    ROS_DEBUG_STREAM("nearst A(0) B(1) C(2) D(3) is: " << (minIter - distance.begin()) );
+
+    return (minIter - distance.begin());
+}
+
+
+void PathPublisher::switchWantedMapCallback(const ros::TimerEvent& timerEvent){
+
+    sign_ = interface_.sign;
+    if(nearCenter() && sign_!="NO_SIGN" ){
+        switch(nearTurnPoint()){
+            case 0: //A
+                if(sign_=="LEFT_SIGN"){ wanted_map_=5;}
+                if(sign_=="RIGHT_SIGN"){ wanted_map_=3;}
+            case 1: //B
+                if(sign_=="LEFT_SIGN"){ wanted_map_=4;}
+                if(sign_=="RIGHT_SIGN"){ wanted_map_=6;}
+            case 2: //C
+                if(sign_=="LEFT_SIGN"){ wanted_map_=7;}
+                if(sign_=="RIGHT_SIGN"){ wanted_map_=3;}
+            case 3: //D
+                if(sign_=="LEFT_SIGN"){ wanted_map_=4;}
+                if(sign_=="RIGHT_SIGN"){ wanted_map_=8;}
+            default: break;
+        }
+
+    }
+    if(!nearCenter() && actual_map_!=1 && actual_map_!=2){
+        switch(nearTurnPoint()){
+            case 0: //A
+                wanted_map_=2;
+            case 1: //B
+                wanted_map_=2;
+            case 2: //C
+                wanted_map_=1;
+            case 3: //D
+                wanted_map_=1;
+            default: break;
+        }
+    }
+}
+
 
 
 /**
