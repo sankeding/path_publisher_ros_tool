@@ -285,18 +285,18 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
 /*******Functions relative to switch the maps (use which logic)***********/
 bool PathPublisher::nearCenter() {
     getVehiclePose();
-    const Eigen::Vector2d vector_position = vehicle_pose_.translation().head<2>();
-    return  (vector_position - map_center_).norm() < interface_.near_center_distance;
+    const Eigen::Vector2d vehcile_position = vehicle_pose_.translation().head<2>();
+    return  (vehcile_position - map_center_).squaredNorm() < interface_.near_center_distance;
 }
 
 int PathPublisher::nearTurnPoint() {
     getVehiclePose();
     const Eigen::Vector2d vector_position = vehicle_pose_.translation().head<2>();
     std::vector<double> distance;
-    distance.push_back((vector_position - map_A_).norm());
-    distance.push_back((vector_position - map_B_).norm());
-    distance.push_back((vector_position - map_C_).norm());
-    distance.push_back((vector_position - map_D_).norm());
+    distance.push_back((vector_position - map_A_).squaredNorm());
+    distance.push_back((vector_position - map_B_).squaredNorm());
+    distance.push_back((vector_position - map_C_).squaredNorm());
+    distance.push_back((vector_position - map_D_).squaredNorm());
     auto minIter = std::min_element(distance.begin(), distance.end());
 
     ROS_DEBUG_STREAM("nearst A(0) B(1) C(2) D(3) is: " << (minIter - distance.begin()) );
@@ -307,18 +307,24 @@ int PathPublisher::nearTurnPoint() {
 
 void PathPublisher::switchWantedMapCallback(const ros::TimerEvent& timerEvent){
 
+    ROS_DEBUG_STREAM("nearst point "<< nearTurnPoint());
+	ROS_DEBUG_STREAM("near Center"<< nearCenter());
+ROS_DEBUG_STREAM("wanted map"<< wanted_map_);
     sign_ = interface_.sign;
-    if(nearCenter() && sign_!=0 ){
+    if(nearCenter() && sign_!=0 && (actual_map_==1 || actual_map_==2)){
         switch(nearTurnPoint()){
             case 0: //A
                 if(sign_==-1){ wanted_map_=5;}
                 if(sign_==1){ wanted_map_=3;}
+		break;
             case 1: //B
                 if(sign_==-1){ wanted_map_=4;}
                 if(sign_==1){ wanted_map_=6;}
+		break;
             case 2: //C
                 if(sign_==-1){ wanted_map_=7;}
                 if(sign_==1){ wanted_map_=3;}
+		break;
             case 3: //D
                 if(sign_==-1){ wanted_map_=4;}
                 if(sign_==1){ wanted_map_=8;}
@@ -330,10 +336,13 @@ void PathPublisher::switchWantedMapCallback(const ros::TimerEvent& timerEvent){
         switch(nearTurnPoint()){
             case 0: //A
                 wanted_map_=2;
+		break;
             case 1: //B
                 wanted_map_=2;
+		break;
             case 2: //C
                 wanted_map_=1;
+		break;
             case 3: //D
                 wanted_map_=1;
             default: break;
