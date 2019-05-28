@@ -67,7 +67,7 @@ private:
     ros::Timer path_publish_timer_;
     ros::Subscriber set_path_subscriber_;  //
 	int set_path_;
-	std::string sign_;
+	int sign_;
 	int wanted_map_;
 	int actual_map_;
 	int actual_map_index_;       //actual_map_index = actual_map - 1

@@ -11,7 +11,7 @@ namespace path_publisher_ros_tool {
 PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate)
         : interface_{nhPrivate}, reconfigureServer_{nhPrivate}, map_center_(7.0, 3.1),
           map_A_(8.5, 5.45), map_B_(4.56, 3.36), map_C_(6.3, 0.24), map_D_(9.72, 2.07),
-          near_center_{false},pass_center_{false},sign_{"NO_SIGN"}{
+          near_center_{false},pass_center_{false},sign_{0}{
 
     /**
      * Initialization
@@ -308,20 +308,20 @@ int PathPublisher::nearTurnPoint() {
 void PathPublisher::switchWantedMapCallback(const ros::TimerEvent& timerEvent){
 
     sign_ = interface_.sign;
-    if(nearCenter() && sign_!="NO_SIGN" ){
+    if(nearCenter() && sign_!=0 ){
         switch(nearTurnPoint()){
             case 0: //A
-                if(sign_=="LEFT_SIGN"){ wanted_map_=5;}
-                if(sign_=="RIGHT_SIGN"){ wanted_map_=3;}
+                if(sign_==-1){ wanted_map_=5;}
+                if(sign_==1){ wanted_map_=3;}
             case 1: //B
-                if(sign_=="LEFT_SIGN"){ wanted_map_=4;}
-                if(sign_=="RIGHT_SIGN"){ wanted_map_=6;}
+                if(sign_==-1){ wanted_map_=4;}
+                if(sign_==1){ wanted_map_=6;}
             case 2: //C
-                if(sign_=="LEFT_SIGN"){ wanted_map_=7;}
-                if(sign_=="RIGHT_SIGN"){ wanted_map_=3;}
+                if(sign_==-1){ wanted_map_=7;}
+                if(sign_==1){ wanted_map_=3;}
             case 3: //D
-                if(sign_=="LEFT_SIGN"){ wanted_map_=4;}
-                if(sign_=="RIGHT_SIGN"){ wanted_map_=8;}
+                if(sign_==-1){ wanted_map_=4;}
+                if(sign_==1){ wanted_map_=8;}
             default: break;
         }
 
