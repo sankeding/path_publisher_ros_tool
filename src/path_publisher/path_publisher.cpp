@@ -316,15 +316,15 @@ ROS_DEBUG_STREAM("wanted map"<< wanted_map_);
             case 0: //A
                 if(sign_==-1){ wanted_map_=5;}
                 if(sign_==1){ wanted_map_=3;}
-		break;
+		        break;
             case 1: //B
                 if(sign_==-1){ wanted_map_=4;}
                 if(sign_==1){ wanted_map_=6;}
-		break;
+		        break;
             case 2: //C
                 if(sign_==-1){ wanted_map_=7;}
                 if(sign_==1){ wanted_map_=3;}
-		break;
+		        break;
             case 3: //D
                 if(sign_==-1){ wanted_map_=4;}
                 if(sign_==1){ wanted_map_=8;}
@@ -336,13 +336,13 @@ ROS_DEBUG_STREAM("wanted map"<< wanted_map_);
         switch(nearTurnPoint()){
             case 0: //A
                 wanted_map_=2;
-		break;
+		        break;
             case 1: //B
                 wanted_map_=2;
-		break;
+		        break;
             case 2: //C
                 wanted_map_=1;
-		break;
+		        break;
             case 3: //D
                 wanted_map_=1;
             default: break;
