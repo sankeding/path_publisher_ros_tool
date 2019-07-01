@@ -28,11 +28,15 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
      * Don't forget to register your callbacks here!
      */
 
-    set_path_subscriber_ = nhPrivate.subscribe("/set_path_topic",
+    set_path_subscriber_ = nhPrivate.subscribe("/DirectionSign",
     								        1,
-    								        &PathPublisher::setPath_Callback,
+    								        &PathPublisher::setSignCallback,
     								        this);                                           //
 
+    detect_obstacle_subscriber_ = nhPrivate.subscribe("/obstacle_detection",
+                                                       1,
+                                                       &PathPublisher::detectObstacleCallback,
+                                                       this);
     reconfigureServer_.setCallback(boost::bind(&PathPublisher::reconfigureRequest, this, _1, _2));
 
 //  initial path_
@@ -41,15 +45,19 @@ PathPublisher::PathPublisher(ros::NodeHandle nhPublic, ros::NodeHandle nhPrivate
     initialPartOfPath(actual_map_);
 
     path_publish_timer_ = nhPrivate.createTimer(ros::Rate(interface_.timer_rate), &PathPublisher::pathPublishCallback, this);
-    switch_wanted_map_timer_ = nhPrivate.createTimer(ros::Rate(10), &PathPublisher::switchWantedMapCallback, this);
+    switch_wanted_map_timer_ = nhPrivate.createTimer(ros::Rate(100), &PathPublisher::switchWantedMapCallback, this);
 
     rosinterface_handler::showNodeInfo();
 }
 
 
-void PathPublisher::setPath_Callback(const std_msgs::Int8::ConstPtr& msg){
-	set_path_ = msg->data;         //wanted_map = msg->data
-	ROS_DEBUG_STREAM("received set_path info:"<< set_path_ <<std::endl);
+void PathPublisher::setSignCallback(const std_msgs::Int8::ConstPtr& msg){
+	 sign_ = msg->data;         //wanted_map = msg->data
+	 //std::string s = msg->data;
+}
+
+void PathPublisher::detectObstacleCallback(const std_msgs::String& msg){
+    obstacle_detection_ = msg.data;
 }
 
 
@@ -310,7 +318,9 @@ void PathPublisher::switchWantedMapCallback(const ros::TimerEvent& timerEvent){
     ROS_DEBUG_STREAM("nearst point "<< nearTurnPoint());
 	ROS_DEBUG_STREAM("near Center"<< nearCenter());
 ROS_DEBUG_STREAM("wanted map"<< wanted_map_);
-    sign_ = interface_.sign;
+    //sign_ = interface_.sign;
+
+
     if(nearCenter() && sign_!=0 && (actual_map_==1 || actual_map_==2)){
         switch(nearTurnPoint()){
             case 0: //A

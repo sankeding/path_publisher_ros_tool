@@ -15,6 +15,7 @@
 #include <sensor_msgs/Image.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Int8.h>
+#include <string>
 #include <algorithm>
 
 #include "path_publisher_ros_tool/PathPublisherInterface.h"
@@ -50,7 +51,8 @@ private:
     void pathPublishCallback(const ros::TimerEvent&);
     void switchWantedMapCallback(const ros::TimerEvent&);
 	void readAllMaps( const std::string& );
-    void setPath_Callback(const std_msgs::Int8::ConstPtr& msg);                      //
+    void setSignCallback(const std_msgs::Int8::ConstPtr& msg);                      //
+    void detectObstacleCallback(const std_msgs::String& msg);
     void initialPartOfPath(const int actual_map);
     void getVehiclePose();
     bool nearCenter();
@@ -59,14 +61,17 @@ private:
 
 
 	const std::vector<std::string> all_maps_name_{"1_A_B_forward", "2_C_D_forward", "3_A_C_right", "4_B_D_left",
-                                                  "5_A_left",      "6_B_right",     "7_C_left",    "8_D_right"};
+                                                  "5_A_left",      "6_B_right",     "7_C_left",    "8_D_right"
+                                                  "9_A_B_forward_reverse","10_C_D_forward_reverse","11_exit" };
 	std::vector<std::vector<Eigen::Vector2d>> all_path_vector_whole_{all_maps_name_.size()};
 
 
 	ros::Timer switch_wanted_map_timer_;
     ros::Timer path_publish_timer_;
     ros::Subscriber set_path_subscriber_;  //
-	int set_path_;
+    ros::Subscriber detect_obstacle_subscriber_;
+    std::string obstacle_detection_;
+	int set_map_;
 	int sign_;
 	int wanted_map_;
 	int actual_map_;
