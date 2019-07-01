@@ -44,9 +44,12 @@
   <depend>mrt_opencv</depend>
   <depend>cv_bridge</depend>
   <depend>message_filters</depend>
+  <depend>utils_ros</depend>
   <depend>tf2_ros</depend>
+  <depend>tf2_eigen</depend>
   <depend>eigen</depend>
   <depend>eigen_conversions</depend>
+  <depend>geometry_msgs</depend>
   <depend>road_map</depend>
   <depend>cornucopia</depend>
   <depend>neverdrive_state_control_ros_tool</depend>>

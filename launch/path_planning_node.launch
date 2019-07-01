@@ -4,6 +4,7 @@
 
   <node pkg="path_publisher_ros_tool" type="path_planning" name="path_planning" output="screen">
     <rosparam command="load" file="$(arg config)"/>
+    <param name="exit_map_path" value="$(find path_publisher_ros_tool)/res/maps/"/>
   </node>
 
 </launch>

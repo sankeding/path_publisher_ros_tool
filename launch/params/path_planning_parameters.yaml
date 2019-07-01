@@ -11,3 +11,19 @@
 # boolean: true
 # vector: [1.0, 2.0, 3.4]
 # map: {"a": "b", "c": "d"}
+verbosity: info
+map_topic: /grid_map
+map_queue_size: 2
+path_topic: /path
+path_queue_size: 1
+update_path_rate: 20
+publish_path_rate: 5
+map_frame_id: world
+vehicle_frame_id: vehicle_front_axle
+planning_margin: 0.4
+probability_threshold: 90
+search_width: 0.08
+search_density: 0.001
+search_interval: 0.08
+effect_range: 0.35
+momentum: 0.8
