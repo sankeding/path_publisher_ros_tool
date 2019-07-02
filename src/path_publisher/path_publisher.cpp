@@ -293,10 +293,9 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
 /*******Functions relative to switch the maps (use which logic)***********/
 bool PathPublisher::nearCenter() {
     getVehiclePose();
-    //const Eigen::Vector2d vehcile_position = vehicle_pose_.translation().head<2>();
+    const Eigen::Vector2d vehcile_position = vehicle_pose_.translation().head<2>();
     //return  (vehcile_position - map_center_).squaredNorm() < interface_.near_center_distance;
-    double x = vehicle_pose_.translation().head<1>();
-    return (x > 7- interface_.near_center_distance && x < 7 + interface_.near_center_distance );
+    return (vehcile_position[0] > 7- interface_.near_center_distance && vehcile_position[0] < 7 + interface_.near_center_distance );
 
 }
 
