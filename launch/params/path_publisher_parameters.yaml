@@ -21,7 +21,7 @@ radius_noise: 0.3
 just_straightway: False
 rotation_noise: 10
 shift_noise: 0.05
-timer_rate: 5
+timer_rate: 100
 delta_sigma: 0.005
 stuck_time: 10
 BB_left_bottom_x: 0.

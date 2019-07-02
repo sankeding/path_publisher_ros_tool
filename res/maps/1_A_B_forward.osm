@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <osm version='0.6' upload='true' generator='JOSM'>
-  <node id='-20' visible='true' lat='49.0144104569' lon='8.41738281464'>
+  <node id='-20' action='modify' visible='true' lat='49.0144104893' lon='8.41738286404'>
     <tag k='real_id' v='-1' />
   </node>
   <node id='-22' visible='true' lat='49.0144105964' lon='8.41738298738'>

@@ -62,7 +62,7 @@ private:
 
 
 	const std::vector<std::string> all_maps_name_{"1_A_B_forward", "2_C_D_forward", "3_A_C_right", "4_B_D_left",
-                                                  "5_A_left",      "6_B_right",     "7_C_left",    "8_D_right"
+                                                  "5_A_left",      "6_B_right",     "7_C_left",    "8_D_right",
                                                   "9_A_B_forward_reverse","10_C_D_forward_reverse","11_exit" };
 	std::vector<std::vector<Eigen::Vector2d>> all_path_vector_whole_{all_maps_name_.size()};
 
