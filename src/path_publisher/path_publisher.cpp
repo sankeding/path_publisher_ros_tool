@@ -78,15 +78,18 @@ void PathPublisher::pathPublishCallback(const ros::TimerEvent & timerEvent) {
     //wanted_map_ = interface_.wanted_map;
     if(actual_map_ == wanted_map_){
 
+
+        auto it = boost::range::min_element(
+                path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+                    return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
+                });
+
         //only when the vehicle go enough distance, publish new path
         if(sample_flag_){
             //   find the closet point to vehicle on path (this moment)
-            auto it = boost::range::min_element(
-                    path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
-                        return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
-                    });
+
             index_distance = std::distance(prev_pos_index_, it);             //how many points the car go through
-            if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
+            //if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
         }else{
             //after initial or change path, publish the initial part_of_path_ first and set sample to true
             sample_flag_ = true;
@@ -105,7 +108,13 @@ void PathPublisher::pathPublishCallback(const ros::TimerEvent & timerEvent) {
             else
                 prev_pos_whole_index_ = all_path_vector_whole_[actual_map_index_].begin();
         }
-        setCliper(prev_pos_whole_index_, all_path_vector_whole_[actual_map_index_], path_start, path_end);
+
+
+
+
+
+
+        setCliper(it, all_path_vector_whole_[actual_map_index_], path_start, path_end);
         ROS_DEBUG_STREAM("pos index moving: " << index_distance << std::endl<<
                                               "current whole path index mark: " << std::distance(all_path_vector_whole_[actual_map_index_].begin(), prev_pos_whole_index_) << std::endl <<
                                               "current path start index: " << std::distance(all_path_vector_whole_[actual_map_index_].begin(), path_start) << std::endl <<
@@ -295,7 +304,7 @@ bool PathPublisher::nearCenter() {
     getVehiclePose();
     const Eigen::Vector2d vehcile_position = vehicle_pose_.translation().head<2>();
     //return  (vehcile_position - map_center_).squaredNorm() < interface_.near_center_distance;
-    return (vehcile_position[0] > 7- interface_.near_center_distance && vehcile_position[0] < 7 + interface_.near_center_distance );
+    return (vehcile_position[0] > map_center_[0]- interface_.near_center_distance && vehcile_position[0] < map_center_[0] + interface_.near_center_distance );
 
 }
 
