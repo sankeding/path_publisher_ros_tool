@@ -78,18 +78,15 @@ void PathPublisher::pathPublishCallback(const ros::TimerEvent & timerEvent) {
     //wanted_map_ = interface_.wanted_map;
     if(actual_map_ == wanted_map_){
 
-
-        auto it = boost::range::min_element(
-                path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
-                    return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
-                });
-
         //only when the vehicle go enough distance, publish new path
         if(sample_flag_){
             //   find the closet point to vehicle on path (this moment)
-
+            auto it = boost::range::min_element(
+                    path_vector_, [&shifted_vehicle_position](const Eigen::Vector2d& le, const Eigen::Vector2d& re){
+                        return (le - shifted_vehicle_position).squaredNorm() < (re - shifted_vehicle_position).squaredNorm();
+                    });
             index_distance = std::distance(prev_pos_index_, it);             //how many points the car go through
-            //if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
+            if (std::abs(index_distance * interface_.point_distance) < interface_.drive_distance) return;
         }else{
             //after initial or change path, publish the initial part_of_path_ first and set sample to true
             sample_flag_ = true;
@@ -108,13 +105,7 @@ void PathPublisher::pathPublishCallback(const ros::TimerEvent & timerEvent) {
             else
                 prev_pos_whole_index_ = all_path_vector_whole_[actual_map_index_].begin();
         }
-
-
-
-
-
-
-        setCliper(it, all_path_vector_whole_[actual_map_index_], path_start, path_end);
+        setCliper(prev_pos_whole_index_, all_path_vector_whole_[actual_map_index_], path_start, path_end);
         ROS_DEBUG_STREAM("pos index moving: " << index_distance << std::endl<<
                                               "current whole path index mark: " << std::distance(all_path_vector_whole_[actual_map_index_].begin(), prev_pos_whole_index_) << std::endl <<
                                               "current path start index: " << std::distance(all_path_vector_whole_[actual_map_index_].begin(), path_start) << std::endl <<
@@ -266,6 +257,11 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
 //		clip a part of path to publish
     auto path_start = it;
     int index_dis = 1;
+    if(path_start==source.begin()){
+    	path_start=source.end()-1;
+	index_dis++;
+    }
+
 //		find the beginning of this part first
     for(--path_start; path_start != it;){
         if ((index_dis * interface_.point_distance) > interface_.path_length/4.0)
@@ -283,6 +279,11 @@ void PathPublisher::setCliper(std::vector<Eigen::Vector2d>::iterator& it, std::v
 //		find the end of this part
     auto path_end = it;
     index_dis = 1;
+    if(path_end==source.end()-1){
+ 	path_end=source.begin();
+	index_dis++;
+    }
+    
     for(++path_end; path_end != it;){
         if((index_dis * interface_.point_distance) > 3.0*interface_.path_length/4.0)
             break;
